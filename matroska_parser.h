@@ -25,10 +25,6 @@
 
 #define MULTITRACK 1
 
-#include "../SDK/foobar2000.h"
-#include "../helpers/helpers.h"
-#include "../../pfc/pfc.h"
-#include "Foobar2000ReaderIOCallback.h"
 #include "DbgOut.h"
 #include <queue>
 #include <deque>
@@ -339,7 +335,7 @@ protected:
 	void SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags);
 		
 
-	Foobar2000ReaderIOCallback m_IOCallback;
+	boost::scoped_ptr<IOCallback> m_IOCallback;
 	EbmlStream m_InputStream;
 	/// The main/base/master element, should be the segment
 	ElementPtr m_ElementLevel0;
