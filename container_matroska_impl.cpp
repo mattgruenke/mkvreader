@@ -11,10 +11,10 @@ void container_matroska_impl::open(const char * p_path, bool p_info_only, abort_
     }
     m_path = p_path;
     m_abort = &p_abort;
-    std::ifstream file(m_path.c_str());
+//    std::ifstream file(m_path.c_str());
 //    if (!file) throw exception_io_unsupported_format();   TO_DO
     try {
-        matroska_parser_ptr parser = matroska_parser_ptr(new MatroskaAudioParser(file, *m_abort));
+        matroska_parser_ptr parser = matroska_parser_ptr(new MatroskaAudioParser(p_path, *m_abort));
         parser->Parse(p_info_only);
         MatroskaAudioParser::attachment_list &attachments = parser->GetAttachmentList();
         for (MatroskaAudioParser::attachment_list::iterator item = attachments.begin(); item != attachments.end(); ++item) {

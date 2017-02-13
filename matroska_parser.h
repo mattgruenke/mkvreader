@@ -251,7 +251,7 @@ class file_info {};
 
 class MatroskaAudioParser {
 public:
-	MatroskaAudioParser(std::ifstream &file, abort_callback & p_abort);
+	MatroskaAudioParser(const char *filename, abort_callback & p_abort);
 	~MatroskaAudioParser();
 
 	/// The main header parsing function
