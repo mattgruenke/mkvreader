@@ -66,11 +66,11 @@ namespace foobar2000_io {
 
         public:
             attachment() : m_owner(0), m_abort(0) {};
-            attachment(const container_matroska_ptr & p_owner, abort_callback & p_abort, const char * p_name, const char * p_mime_type,
+            attachment(container_matroska *p_owner, abort_callback & p_abort, const char * p_name, const char * p_mime_type,
                         const char * p_description, const size_t p_size, const size_t p_position)
                 : m_name(p_name), m_mime_type(p_mime_type), m_description(p_description), m_size(p_size), m_position(p_position)
             {
-                m_owner = p_owner.get();
+                m_owner = p_owner;
                 m_abort = &p_abort;
             };
             ~attachment() {};
