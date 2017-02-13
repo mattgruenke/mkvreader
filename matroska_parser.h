@@ -79,6 +79,8 @@
 #include "matroska/KaxChapters.h"
 #include "matroska/KaxVersion.h"
 
+#include "abort_callback.h"
+
 #define TIMECODE_SCALE  1000000
 #define MAX_UINT64 0xFFFFFFFFFFFFFFFF
 #define _DELETE(__x) if (__x) { delete __x; __x = NULL; }
@@ -246,7 +248,6 @@ typedef boost::shared_ptr<MatroskaMetaSeekClusterEntry> cluster_entry_ptr;
 
 // TO_DO:
 class file_info {};
-class abort_callback {};
 
 class MatroskaAudioParser {
 public:

@@ -5,6 +5,10 @@
 #include <string>
 #include <fstream>
 
+#include <boost/shared_ptr.hpp>
+
+#include "abort_callback.h"
+
 namespace foobar2000_io {
 
         // TO_DO:
