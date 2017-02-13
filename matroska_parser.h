@@ -40,6 +40,7 @@
 #include <deque>
 #include <list>
 #include <cstring>
+#include <fstream>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
@@ -249,7 +250,7 @@ class abort_callback {};
 
 class MatroskaAudioParser {
 public:
-	MatroskaAudioParser(FILE *file, abort_callback & p_abort);
+	MatroskaAudioParser(std::ifstream &file, abort_callback & p_abort);
 	~MatroskaAudioParser();
 
 	/// The main header parsing function
