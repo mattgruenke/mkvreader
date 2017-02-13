@@ -1,15 +1,20 @@
 #ifndef _CONTAINER_MATROSKA_H_
 #define _CONTAINER_MATROSKA_H_
 
+#include <list>
+
 namespace foobar2000_io {
+
+        // TO_DO:
+    class service_base {};
 
     namespace matroska {
         class attachment;
 
-        typedef pfc::list_base_const_t<attachment> attachment_list;
+        typedef std::list<attachment> attachment_list;
     }
     
-    class NOVTABLE container_matroska : public service_base {
+    class container_matroska : public service_base {
     public:
         virtual void open(const char * p_path, bool p_info_only, abort_callback & p_abort)=0;
         virtual void open_file(service_ptr_t<file> & p_out, const filesystem::t_open_mode p_mode = filesystem::open_mode_read) const =0;
