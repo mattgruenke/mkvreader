@@ -38,6 +38,9 @@
 #include "DbgOut.h"
 #include <queue>
 #include <deque>
+#include <list>
+#include <cstring>
+#include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 
 // libebml includes
@@ -65,7 +68,7 @@
 #include "matroska/KaxInfoData.h"
 #include "matroska/KaxTags.h"
 #include "matroska/KaxTag.h"
-#include "matroska/KaxTagMulti.h"
+// #include "matroska/KaxTagMulti.h"    TO_DO: obsolete?
 #include "matroska/KaxCluster.h"
 #include "matroska/KaxClusterData.h"
 #include "matroska/KaxTrackAudio.h"
@@ -223,7 +226,7 @@ class MatroskaTrackInfo {
 		uint16 trackNumber;
 		uint64 trackUID;		
 		std::string codecID;
-		std::vector<BYTE> codecPrivate;
+		std::vector<uint8_t> codecPrivate;
 		bool codecPrivateReady;
 		
 		UTFstring name;
@@ -240,9 +243,13 @@ class MatroskaTrackInfo {
 
 typedef boost::shared_ptr<MatroskaMetaSeekClusterEntry> cluster_entry_ptr;
 
+// TO_DO:
+class file_info {};
+class abort_callback {};
+
 class MatroskaAudioParser {
 public:
-	MatroskaAudioParser(service_ptr_t<file> input, abort_callback & p_abort);
+	MatroskaAudioParser(FILE *file, abort_callback & p_abort);
 	~MatroskaAudioParser();
 
 	/// The main header parsing function
@@ -269,7 +276,7 @@ public:
 
 	/// Set the fb2k info from the matroska file
 	/// \param info This will be filled up with tags ;)
-	bool SetFB2KInfo(file_info &info, t_uint32 p_subsong);
+	bool SetFB2KInfo(file_info &info, uint32_t p_subsong);
 
 	/// Get the foobar2000 style format string
 //	const char *GetFoobar2000Format(uint16 trackNo, bool bSetupCodecPrivate = true);
@@ -308,7 +315,7 @@ public:
     MatroskaAudioFrame * ReadFirstFrame();
 
 	UTFstring GetSegmentFileName() { return m_SegmentFilename; }
-    typedef pfc::list_t<MatroskaAttachment> attachment_list;
+    typedef std::list<MatroskaAttachment> attachment_list;
 	attachment_list &GetAttachmentList() { return m_AttachmentList; }
 
 protected:
@@ -408,8 +415,8 @@ private:
 public:
 	MatroskaSearch(binary * p_source, binary * p_pattern)
 	{
-		ZeroMemory(next, sizeof(next));
-		ZeroMemory(skip, sizeof(skip));
+		memset(next, 0, sizeof(next));
+		memset(skip, 0, sizeof(skip));
 		source = p_source;
 		pattern = p_pattern;
 		Skip();
