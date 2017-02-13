@@ -28,10 +28,6 @@
 #ifndef STRICT
 #define STRICT
 #endif
-#define WINDOWS_LEAN_AND_MEAN
-#include <windows.h>
-#include <windowsx.h>
-#include <tchar.h>
 
 #ifdef _DEBUG
 //#define DEBUG_OUT_PUT
