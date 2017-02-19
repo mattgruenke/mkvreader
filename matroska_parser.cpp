@@ -32,7 +32,14 @@
 
 #include "matroska_parser.h"
 
+#include <cmath>
 #include <string>
+#include <algorithm>
+
+#include <boost/format.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/algorithm/string/case_conv.hpp>
+
 using std::string;
 
 using namespace LIBEBML_NAMESPACE;	
@@ -90,6 +97,11 @@ static const char * hidden_chapter_field[] =
 bool starts_with(const string &s, const char *start) {
   return strncmp(s.c_str(), start, strlen(start)) == 0;
 };
+
+static bool IsSeekable(const IOCallback &cb)
+{
+    return true;    // since we're using StdIOCallback, it's always seekable.
+}
 
 uint64 MatroskaAudioParser::SecondsToTimecode(double seconds)
 {
@@ -150,7 +162,7 @@ void MatroskaTagInfo::SetTagValue(const char *name, const char *value, int index
 	for (size_t s = 0; s < tags.size(); s++)
 	{
 		MatroskaSimpleTag &currentSimpleTag = tags.at(s);
-		if (strcmpi(currentSimpleTag.name.GetUTF8().c_str(), name) == 0)			
+		if (strcasecmp(currentSimpleTag.name.GetUTF8().c_str(), name) == 0)			
 		{
 			if(index == 0)
 			{
@@ -222,9 +234,11 @@ MatroskaTrackInfo::MatroskaTrackInfo() {
 	codecPrivateReady = false;
 };
 
-MatroskaAudioParser::MatroskaAudioParser(service_ptr_t<file> input, abort_callback & p_abort) 
-	: m_IOCallback(input, p_abort),
-		m_InputStream(m_IOCallback)
+MatroskaAudioParser::MatroskaAudioParser(const char *filename, abort_callback & p_abort) 
+	:
+		m_filename(filename),
+		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode
+		m_InputStream(*m_IOCallback)
 {
 	m_TimecodeScale = TIMECODE_SCALE;
 	m_FileDate = 0;
@@ -234,7 +248,7 @@ MatroskaAudioParser::MatroskaAudioParser(service_ptr_t<file> input, abort_callba
 	//UpperElementLevel = 0;
 	m_CurrentEdition = 0;
 	m_CurrentChapter = 0;
-	m_FileSize = input->get_size(p_abort);
+	m_FileSize = boost::filesystem::file_size(filename); // TO_DO: throws
 	m_TagPos = 0;
 	m_TagSize = 0;
 	m_TagScanRange = 1024 * 64;
@@ -268,7 +282,7 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		ElementPtr NullElement;
 
 		// Be sure we are at the beginning of the file
-		m_IOCallback.setFilePointer(0);
+		m_IOCallback->setFilePointer(0);
 		// Find the EbmlHead element. Must be the first one.
 		m_ElementLevel0 = ElementPtr(m_InputStream.FindNextID(EbmlHead::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (m_ElementLevel0 == NullElement) {
@@ -304,28 +318,28 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 			}
 
 			if (EbmlId(*ElementLevel1) == KaxSeekHead::ClassInfos.GlobalId) {
-				if (m_IOCallback.seekable()) {
+				if (IsSeekable(*m_IOCallback)) {
 					Parse_MetaSeek(ElementLevel1, bInfoOnly);
 					if (m_TagPos == 0) {
 						// Search for them at the end of the file
 						if (m_TagScanRange > 0)
 						{
-							m_IOCallback.setFilePointer(m_FileSize - m_TagScanRange);
-							uint64 init_pos = m_IOCallback.getFilePointer();
+							m_IOCallback->setFilePointer(m_FileSize - m_TagScanRange);
+							uint64 init_pos = m_IOCallback->getFilePointer();
 							/*
 								BM Search
 							*/
 							binary buf[1024*64];
 							binary pat[3]; pat[0] = 0x54; pat[1] = 0xc3; pat[2] = 0x67;
-							uint64 s_pos = m_IOCallback.getFilePointer();
-							m_IOCallback.read(buf, m_TagScanRange);
+							uint64 s_pos = m_IOCallback->getFilePointer();
+							m_IOCallback->read(buf, m_TagScanRange);
 							MatroskaSearch search(buf, pat);
 							int pos = search.Match();
 							if (pos != -1) {
 								do {
-									m_IOCallback.setFilePointer(s_pos+pos+3);
-									uint64 startPos = m_IOCallback.getFilePointer();
-									m_IOCallback.setFilePointer(-4, seek_current);
+									m_IOCallback->setFilePointer(s_pos+pos+3);
+									uint64 startPos = m_IOCallback->getFilePointer();
+									m_IOCallback->setFilePointer(-4, seek_current);
 									ElementPtr levelUnknown = ElementPtr(m_InputStream.FindNextID(KaxTags::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 									if ((levelUnknown != NullElement) 
 										&& (m_FileSize >= startPos + levelUnknown->GetSize()) 
@@ -334,23 +348,23 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 										Parse_Tags(static_cast<KaxTags *>(levelUnknown.get()));
 										break;
 									}
-									m_IOCallback.setFilePointer(s_pos);
+									m_IOCallback->setFilePointer(s_pos);
 									pos = search.Match(pos+1);
 								} while (pos != -1);
 								/*
 									~BM Search
 								*/
 							} else {
-								m_IOCallback.setFilePointer(init_pos);
+								m_IOCallback->setFilePointer(init_pos);
 								binary Buffer[4];
-								while (m_IOCallback.read(Buffer, 3) >= 3)
+								while (m_IOCallback->read(Buffer, 3) >= 3)
 								{//0x18
 									if ((Buffer[0] == 0x54) && (Buffer[1] == 0xc3) && (Buffer[2] == 0x67))
 									{
-										uint64 startPos = m_IOCallback.getFilePointer();
+										uint64 startPos = m_IOCallback->getFilePointer();
 
 										//seek back 3 bytes, so libmatroska can find the Tags element Ebml ID
-										m_IOCallback.setFilePointer(-4, seek_current);
+										m_IOCallback->setFilePointer(-4, seek_current);
 
 										ElementPtr levelUnknown = ElementPtr(m_InputStream.FindNextID(KaxTags::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 										if ((levelUnknown != NullElement) 
@@ -364,10 +378,10 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 										//_DELETE(levelUnknown);
 
 										//Restore the file pos
-										m_IOCallback.setFilePointer(startPos);
+										m_IOCallback->setFilePointer(startPos);
 									}
 									//seek back 2 bytes
-									m_IOCallback.setFilePointer(-2, seek_current);
+									m_IOCallback->setFilePointer(-2, seek_current);
 								}
 							}
 						} else {
@@ -561,7 +575,7 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 				}
 			} else if (EbmlId(*ElementLevel1) == KaxCluster::ClassInfos.GlobalId) {
 				if (bBreakAtClusters) {
-					m_IOCallback.setFilePointer(ElementLevel1->GetElementPosition());
+					m_IOCallback->setFilePointer(ElementLevel1->GetElementPosition());
 					//delete ElementLevel1;
 					//ElementLevel1 = NULL;
 					//_DELETE(ElementLevel1);
@@ -630,8 +644,7 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 								ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, 0xFFFFFFFFL, true, 1));
 							}					
 						} // while (ElementLevel3 != NULL)
-						//m_AttachmentList.push_back(newAttachment);
-                        m_AttachmentList.add_item(newAttachment);
+						m_AttachmentList.push_back(newAttachment);
 					}
 
 					if (UpperElementLevel > 0) {	// we're coming from ElementLevel3
@@ -758,7 +771,7 @@ int MatroskaAudioParser::WriteTags()
 			*static_cast<EbmlUInteger *>(&MyKaxTagDefault) = currentSimpleTag.defaultFlag;			
 		}
 
-		m_IOCallback.setFilePointer(m_TagPos);
+		m_IOCallback->setFilePointer(m_TagPos);
 		// Now we write the tags to the file
 		EbmlVoid & Dummy = GetChild<EbmlVoid>(*static_cast<EbmlMaster *>(m_ElementLevel0.get()));
 		uint64 size_of_tags = m_TagSize;
@@ -767,39 +780,42 @@ int MatroskaAudioParser::WriteTags()
 			size_of_tags = MyKaxTags.GetSize();
 
 		Dummy.SetSize(size_of_tags+8); // Size of the previous tag element
-		uint64 pos = m_IOCallback.getFilePointer();
+		uint64 pos = m_IOCallback->getFilePointer();
 		if (pos == 0)
 			//We don't want to overwrite the EBML header :P
 			return 2;
-		Dummy.Render(m_IOCallback);
-		m_IOCallback.setFilePointer(Dummy.GetElementPosition());
-		pos = m_IOCallback.getFilePointer();
+		Dummy.Render(*m_IOCallback);
+		m_IOCallback->setFilePointer(Dummy.GetElementPosition());
+		pos = m_IOCallback->getFilePointer();
 		if (pos == 0)
 			//We don't want to overwrite the EBML header :P
 			return 2;
 
-		MyKaxTags.Render(m_IOCallback);
+		MyKaxTags.Render(*m_IOCallback);
 		
 		//l0->UpdateSize(false, true);
 		std::auto_ptr<KaxSegment> new_segment(new KaxSegment);
 		KaxSegment * segment = (KaxSegment *)m_ElementLevel0.get();
 
-		m_IOCallback.setFilePointer(segment->GetElementPosition());
-		new_segment->WriteHead(m_IOCallback, segment->HeadSize() - 4);
-		m_IOCallback.setFilePointer(0, seek_end);
-		int ret = new_segment->ForceSize(m_IOCallback.getFilePointer() - segment->HeadSize() - segment->GetElementPosition());
+		m_IOCallback->setFilePointer(segment->GetElementPosition());
+		new_segment->WriteHead(*m_IOCallback, segment->HeadSize() - 4);
+		m_IOCallback->setFilePointer(0, seek_end);
+		int ret = new_segment->ForceSize(m_IOCallback->getFilePointer() - segment->HeadSize() - segment->GetElementPosition());
 		if (!ret) { 
-			segment->OverwriteHead(m_IOCallback);
+			segment->OverwriteHead(*m_IOCallback);
 		      /*("Wrote the element at the end of the file but could "
                       "not update the segment size. Therefore the element "
                       "will not be visible. Aborting the process. The file "
                       "has been changed!")*/
-			m_IOCallback.setFilePointer(segment->HeadSize() - segment->GetElementPosition());
-			m_IOCallback.truncate();
+
+			// Truncate the file:
+			size_t newsize = segment->HeadSize() - segment->GetElementPosition();
+			m_IOCallback->close();
+			boost::filesystem::resize_file(m_filename, newsize);
 
 			return 1;
 		} else {
-			new_segment->OverwriteHead(m_IOCallback);
+			new_segment->OverwriteHead(*m_IOCallback);
 
 		}
 
@@ -807,40 +823,14 @@ int MatroskaAudioParser::WriteTags()
 	return 0;
 };
 
-static const char* foobar2k_to_matroska_edition_tag(const char * name)
-{
-	if (!stricmp_utf8(name, "ALBUM"))
-		return "TITLE";
-	else if (!stricmp_utf8(name, "SUBALBUM"))
-		return "SUBTITLE";
-	else if (starts_with(name, "ALBUM ")) {
-		static char newname[255];
-		ZeroMemory(newname,255);
-		strncpy(newname,name+6,254);
-		name = newname;
-	}
-	for (int i = 0; i < tabsize(edition_tag_mapping); i++)
-		if (!stricmp_utf8(name, edition_tag_mapping[i][FOOBAR2K_TAG_IDX]))
-			return edition_tag_mapping[i][MATROSKA_TAG_IDX];
-	return name;
-}
-
-static const char* foobar2k_to_matroska_chapter_tag(const char * name)
-{
-	for (int i = 0; i < tabsize(chapter_tag_mapping); i++)
-		if (!stricmp_utf8(name, chapter_tag_mapping[i][FOOBAR2K_TAG_IDX]))
-			return chapter_tag_mapping[i][MATROSKA_TAG_IDX];
-		return name;
-}
-
 int meta_get_num(const file_info &info, const char* name, int idx)
 {
-	assert(pfc::is_valid_utf8(name));
-	int n, m = min(info.meta_get_count(), idx);
+//	assert(pfc::is_valid_utf8(name));
+	int n, m = std::min(info.meta_get_count(), (size_t) idx);
 	int rv = 0;
 	for(n=0; n<m; n++)
 	{
-		if (!stricmp_utf8(name, info.meta_enum_name(n)))
+		if (!strcasecmp(name, info.meta_enum_name(n)))
 			rv++;
 	}
 	return rv;
@@ -858,10 +848,22 @@ bool isEditionTag(const char * name) {
 	}
 }
 
+
+    // drop-in replacement for the PFC version.
+static std::string float_to_string(size_t out_max, double val, unsigned precision)
+{
+    std::string fmt = boost::str( boost::format( "%%.%df" ) % precision );
+    std::string result = boost::str( boost::format( fmt ) % val );
+    if (result.size() > out_max) result.resize( out_max );
+    return result;
+}
+
+
 void MatroskaAudioParser::SetTags(const file_info &info)
 {
 	int i, idx;
-	const char *name, *value;	
+	const char *name;	
+        std::string value;
 
 	if (m_Chapters.size() == 0)
 	{		
@@ -887,32 +889,28 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
 				idx = j;
-				name = foobar2k_to_matroska_chapter_tag(name);
-				if ((name != NULL) && (value != NULL)) {
-					trackTag->SetTagValue(name, value, idx);
+//				name = foobar2k_to_matroska_chapter_tag(name);
+				if ((name != NULL) && !value.empty()) {
+					trackTag->SetTagValue(name, value.c_str(), idx);
 				}
 			}
 		}
 		// Add the replay_gain tags
 		replaygain_info rg = info.get_replaygain();
 		if (rg.is_track_gain_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_track_gain, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_track_gain, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			trackTag->SetTagValue("REPLAYGAIN_GAIN", value);
+		if (!value.empty())
+			trackTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
 		if (rg.is_track_peak_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_track_peak, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_track_peak, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			trackTag->SetTagValue("REPLAYGAIN_PEAK", value);
+		if (!value.empty())
+			trackTag->SetTagValue("REPLAYGAIN_PEAK", value.c_str());
 		trackTag->RemoveMarkedTags();
 	}
 	
@@ -939,36 +937,34 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
 				idx = j;
+/*
 				if (isEditionTag(name))
 				{
 					name = foobar2k_to_matroska_edition_tag(name);
 				} else {
 					name = NULL;
 				}
-				if ((name != NULL) && (value != NULL)) {
-					trackTag->SetTagValue(name, value, idx);
+*/
+				if ((name != NULL) && !value.empty()) {
+					trackTag->SetTagValue(name, value.c_str(), idx);
 				}
 			}
 		}
 		replaygain_info rg = info.get_replaygain();
 		if (rg.is_album_gain_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_album_gain, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_album_gain, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			trackTag->SetTagValue("REPLAYGAIN_GAIN", value);
+		if (!value.empty())
+			trackTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
 		if (rg.is_album_peak_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_album_peak, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_album_peak, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			trackTag->SetTagValue("REPLAYGAIN_PEAK", value);
+		if (!value.empty())
+			trackTag->SetTagValue("REPLAYGAIN_PEAK", value.c_str());
 		trackTag->RemoveMarkedTags();
 	}
 
@@ -999,36 +995,34 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
 				idx = j;
+/*
 				if (isEditionTag(name))
 				{
 					name = NULL;
 				} else {
 					name = foobar2k_to_matroska_chapter_tag(name);
 				}
-				if ((name != NULL) && (value != NULL)) {
-					chapterTag->SetTagValue(name, value, idx);
+*/
+				if ((name != NULL) && !value.empty()) {
+					chapterTag->SetTagValue(name, value.c_str(), idx);
 				}
 			}
 		}
 		replaygain_info rg = info.get_replaygain();
 		if (rg.is_track_gain_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_track_gain, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_track_gain, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			chapterTag->SetTagValue("REPLAYGAIN_GAIN", value);
+		if (!value.empty())
+			chapterTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
 		if (rg.is_track_peak_present()) {
-			char tmp[rg.text_buffer_size];
-			pfc::float_to_string(tmp, rg.text_buffer_size, rg.m_track_peak, 7);
-			value = (const char*)tmp;
+			value = float_to_string(rg.text_buffer_size, rg.m_track_peak, 7);
 		} else {
-			value = NULL;
+			value.clear();
 		}
-		if (value)
-			chapterTag->SetTagValue("REPLAYGAIN_PEAK", value);
+		if (!value.empty())
+			chapterTag->SetTagValue("REPLAYGAIN_PEAK", value.c_str());
 		chapterTag->RemoveMarkedTags();
 	}
 };
@@ -1137,12 +1131,14 @@ uint32 MatroskaAudioParser::GetAudioTrackIndex(uint32 index)
 	return idx;
 }
 
+#define tabsize(tab) (sizeof(tab)/sizeof(*tab))
+
 static bool is_rg_field(const char * name)
 {
 	int m;
 	for (m = 0; m < tabsize(rg_fields); m++)
 	{
-		if (!stricmp_utf8(name,rg_fields[m])) return true;
+		if (!strcasecmp(name,rg_fields[m])) return true;
 	}
 	return false;
 }
@@ -1150,7 +1146,7 @@ static bool is_rg_field(const char * name)
 static bool is_hidden_edition_field(const char * name)
 {
 	for (int i = 0; i < tabsize(hidden_edition_field); i++)
-		if (!stricmp_utf8(name, hidden_edition_field[i]))
+		if (!strcasecmp(name, hidden_edition_field[i]))
 			return true;
 	return false;
 }
@@ -1158,37 +1154,14 @@ static bool is_hidden_edition_field(const char * name)
 static bool is_hidden_chapter_field(const char * name)
 {
 	for (int i = 0; i < tabsize(hidden_chapter_field); i++)
-		if (!stricmp_utf8(name, hidden_chapter_field[i]))
+		if (!strcasecmp(name, hidden_chapter_field[i]))
 			return true;
 	return false;
 }
 
-static const char* matroska_to_foobar2k_edition_tag(const char * name)
-{
-	for (int i = 0; i < tabsize(edition_tag_mapping); i++)
-		if (!stricmp_utf8(name, edition_tag_mapping[i][MATROSKA_TAG_IDX]))
-			return edition_tag_mapping[i][FOOBAR2K_TAG_IDX];
-	return name;
-}
-
-static const char* matroska_to_foobar2k_chapter_tag(const char * name)
-{
-	for (int i = 0; i < tabsize(chapter_tag_mapping); i++)
-		if (!stricmp_utf8(name, chapter_tag_mapping[i][MATROSKA_TAG_IDX]))
-			return chapter_tag_mapping[i][FOOBAR2K_TAG_IDX];
-	return name;
-}
-
-static void convert_matroska_to_foobar2k_tag(pfc::string_base & p_out, const char * p_name)
-{
-    pfc::string8 name(p_name);
-    //name.replace_char('_', ' ');
-    p_out = name;
-}
-
 static bool IsTagNamed(const MatroskaSimpleTag &currentSimpleTag, const char * name)
 {
-	return !stricmp_utf8(currentSimpleTag.name.GetUTF8().c_str(), name);
+	return !strcasecmp(currentSimpleTag.name.GetUTF8().c_str(), name);
 }
 
 static bool IsTagValued(const MatroskaSimpleTag &currentSimpleTag, const char * value)
@@ -1198,7 +1171,7 @@ static bool IsTagValued(const MatroskaSimpleTag &currentSimpleTag, const char * 
 
 static bool AreTagsNameEqual(const MatroskaSimpleTag &tag1, const MatroskaSimpleTag &tag2)
 {
-	return !stricmp_utf8(tag1.name.GetUTF8().c_str(), tag2.name.GetUTF8().c_str());
+	return !strcasecmp(tag1.name.GetUTF8().c_str(), tag2.name.GetUTF8().c_str());
 }
 
 static bool AreTagsValueEqual(const MatroskaSimpleTag &tag1, const MatroskaSimpleTag &tag2)
@@ -1379,7 +1352,9 @@ void MatroskaAudioParser::SetAlbumTags(file_info & info,
                  IsTagNamed(simpleTag, "PART_NUMBER") ||
                  IsTagNamed(simpleTag, "TOTAL_DISCS"))
 		{
-			info.meta_add(matroska_to_foobar2k_edition_tag(simpleTag.name.GetUTF8().c_str()), simpleTag.value.GetUTF8().c_str());
+//			const char *name = matroska_to_foobar2k_edition_tag(simpleTag.name.GetUTF8().c_str());
+			const char *name = simpleTag.name.GetUTF8().c_str();
+			info.meta_add(name, simpleTag.value.GetUTF8().c_str());
 		}
         /*else if (IsTagNamed(simpleTag,"COMMENTS"))
 		{
@@ -1390,10 +1365,13 @@ void MatroskaAudioParser::SetAlbumTags(file_info & info,
 		{
 			// Prefix tag with "ALBUM "
 			char newTagName[255] = "ALBUM ";
-			strncat(newTagName, matroska_to_foobar2k_edition_tag(simpleTag.name.GetUTF8().c_str()),255);
-            pfc::string8 new_tagname;
-            convert_matroska_to_foobar2k_tag(new_tagname, newTagName);
-			info.meta_add(new_tagname, simpleTag.value.GetUTF8().c_str());
+//			const char *name = matroska_to_foobar2k_edition_tag(simpleTag.name.GetUTF8().c_str());
+			const char *name = simpleTag.name.GetUTF8().c_str();
+			strncat(newTagName, name, 255);
+            std::string new_tagname;
+//            convert_matroska_to_foobar2k_tag(new_tagname, newTagName);
+            new_tagname = newTagName;
+			info.meta_add(new_tagname.c_str(), simpleTag.value.GetUTF8().c_str());
 		}
 		else 
 		{
@@ -1440,14 +1418,31 @@ void MatroskaAudioParser::SetTrackTags(file_info &info, MatroskaTagInfo* TrackTa
 		}
 		else
 		{
-            pfc::string8 new_tagname;
-            convert_matroska_to_foobar2k_tag(new_tagname, matroska_to_foobar2k_chapter_tag(simpleTag.name.GetUTF8().c_str()));
-			info.meta_add(new_tagname, simpleTag.value.GetUTF8().c_str());	
+            std::string new_tagname;
+//            convert_matroska_to_foobar2k_tag(new_tagname, matroska_to_foobar2k_chapter_tag(simpleTag.name.GetUTF8().c_str()));
+            new_tagname = simpleTag.name.GetUTF8().c_str();
+			info.meta_add(new_tagname.c_str(), simpleTag.value.GetUTF8().c_str());	
 		}
 	}
 }
 
-bool MatroskaAudioParser::SetFB2KInfo(file_info &info, t_uint32 p_subsong)
+
+static uint64_t time_to_samples(double time, uint32_t sample_rate) {
+	return (uint64_t) floor(sample_rate * time + 0.5);
+}
+
+
+static std::string cuesheet_format_index_time(double time) {
+	uint64_t ticks = time_to_samples(time, 75);
+	uint64_t seconds = ticks / 75;
+	uint64_t minutes = seconds / 60;
+	ticks %= 75;
+	seconds %= 60;
+	return boost::str( boost::format( "%02d:%02d:%02d" ) % minutes % seconds % ticks );
+}
+
+
+bool MatroskaAudioParser::SetFB2KInfo(file_info &info, uint32_t p_subsong)
 {
 	if (m_MuxingApp.length() > 0)
 		info.info_set("MUXING_APP", m_MuxingApp.GetUTF8().c_str());
@@ -1460,7 +1455,7 @@ bool MatroskaAudioParser::SetFB2KInfo(file_info &info, t_uint32 p_subsong)
 	try {
 		if (m_Chapters.at(p_subsong).subChapters.size() > 1) {
 			double pregap = TimecodeToSeconds(m_Chapters.at(p_subsong).subChapters.at(1).timeStart - m_Chapters.at(p_subsong).subChapters.at(0).timeStart);
-			info.info_set("pregap", cuesheet_format_index_time(pregap));
+			info.info_set("pregap", cuesheet_format_index_time(pregap).c_str());
 		}
 	} catch (std::out_of_range & e) {
 	}
@@ -1508,15 +1503,15 @@ bool MatroskaAudioParser::SetFB2KInfo(file_info &info, t_uint32 p_subsong)
 		if ((info.meta_get("TRACKNUMBER", 0) == NULL) || (strlen(info.meta_get("TRACKNUMBER", 0)) == 0))
 		{
 			//char trackNumberString[32];
-            pfc::string8 trackNumberString;
+            std::string trackNumberString;
 #ifdef MULTITRACK			
 			//wsprintf((LPWSTR)trackNumberString, (LPCWSTR)"%d",
 			//	(p_subsong % m_Chapters.size()) +1);
-            trackNumberString << ((p_subsong % m_Chapters.size()) +1);
+            trackNumberString += ((p_subsong % m_Chapters.size()) +1);
 #else
 			wsprintf(trackNumberString, "%d",p_subsong+1);
 #endif
-			info.meta_set("TRACKNUMBER", trackNumberString);
+			info.meta_set("TRACKNUMBER", trackNumberString.c_str());
 		}
 		if ((info.meta_get("ALBUM", 0) == NULL) || (strlen(info.meta_get("ALBUM", 0)) == 0))
 		{
@@ -1670,7 +1665,7 @@ typedef boost::shared_ptr<EbmlId> EbmlIdPtr;
 
 void MatroskaAudioParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly) 
 {
-    TIMER;
+//    TIMER;
 	uint64 lastSeekPos = 0;
 	uint64 endSeekPos = 0;
 	ElementPtr l2;
@@ -1737,13 +1732,13 @@ void MatroskaAudioParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoO
 
 					} else if (*id == KaxSeekHead::ClassInfos.GlobalId) {
 						NOTE1("Found MetaSeek Seek Entry Postion: %u", (unsigned long)lastSeekPos);
-						uint64 orig_pos = m_IOCallback.getFilePointer();
-						m_IOCallback.setFilePointer(static_cast<KaxSegment *>(m_ElementLevel0.get())->GetGlobalPosition(lastSeekPos));
+						uint64 orig_pos = m_IOCallback->getFilePointer();
+						m_IOCallback->setFilePointer(static_cast<KaxSegment *>(m_ElementLevel0.get())->GetGlobalPosition(lastSeekPos));
 						
 						ElementPtr levelUnknown = ElementPtr(m_InputStream.FindNextID(KaxSeekHead::ClassInfos, 0xFFFFFFFFFFFFFFFFL));										
 						Parse_MetaSeek(levelUnknown, bInfoOnly);
 
-						m_IOCallback.setFilePointer(orig_pos);
+						m_IOCallback->setFilePointer(orig_pos);
 					}
 
 				} else {
@@ -1767,7 +1762,7 @@ void MatroskaAudioParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoO
 			l2 = ElementPtr(m_InputStream.FindNextElement(metaSeekElement->Generic().Context, UpperElementLevel, 0xFFFFFFFFFFFFFFFFL, true, 1));
 		}
 	}
-    _TIMER("Parse_MetaSeek");
+//    _TIMER("Parse_MetaSeek");
 }
 
 #define IS_ELEMENT_ID(__x__) (Element->Generic().GlobalId == __x__::ClassInfos.GlobalId)
@@ -1980,7 +1975,10 @@ void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 						Element = (*tagSimpleElement)[k];
 						if(IS_ELEMENT_ID(KaxTagName))
 						{
-							newSimpleTag.name = wcsupr((wchar_t *)UTFstring(*static_cast <EbmlUnicodeString *>(Element)).c_str());
+							UTFstring str_utf(*static_cast <EbmlUnicodeString *>(Element));
+							std::string str_utf8 = str_utf.GetUTF8();
+							std::string str_upper = boost::algorithm::to_upper_copy(str_utf8);
+							newSimpleTag.name.SetUTF8(str_upper);
 							NOTE1("- Name : %s", newSimpleTag.name.GetUTF8().c_str());
 						}
 						else if(IS_ELEMENT_ID(KaxTagString))
@@ -2013,6 +2011,15 @@ void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 	}
 };
 
+static void log_error( const boost::format &fmt )
+{
+}
+
+static void log_info( const std::string &str )
+{
+}
+
+
 int MatroskaAudioParser::FillQueue() 
 {
 	flush_queue();
@@ -2030,15 +2037,15 @@ int MatroskaAudioParser::FillQueue()
 	ElementPtr NullElement;
 	//m_framebuffer.set_size(0);
 
-	if (m_IOCallback.seekable()) {
+	if (IsSeekable(*m_IOCallback)) {
 		cluster_entry_ptr currentCluster = FindCluster(m_CurrentTimecode);
 		if (currentCluster.get() == NULL)
 			return 2;
 		int64 clusterFilePos = currentCluster->filePos;
 
-		//console::info(uStringPrintf("cluster %d", currentCluster->clusterNo));
+		//log_info(uStringPrintf("cluster %d", currentCluster->clusterNo));
 
-		m_IOCallback.setFilePointer(clusterFilePos);
+		m_IOCallback->setFilePointer(clusterFilePos);
 		// Find the element data
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)
@@ -2197,7 +2204,7 @@ int MatroskaAudioParser::FillQueue()
 
 						prevFrame = newFrame;
                     } else {
-                        hprintf(L"newFrame ==!! delete!!\n");
+                        log_info("newFrame ==!! delete!!\n");
                         _DELETE(newFrame);
                     }
 				}
@@ -2231,8 +2238,8 @@ int MatroskaAudioParser::FillQueue()
 			m_CurrentTimecode = m_ClusterIndex.at(currentCluster->clusterNo+1)->timecode;
 			if(m_CurrentTimecode == 0)
 			{
-				console::error(uStringPrintf("clusterNo : %d, m_ClusterIndex.size() : %d", currentCluster->clusterNo, m_ClusterIndex.size()));
-				console::info("m_CurrentTimecode == 0 (a)");
+				log_error(boost::format("clusterNo : %d, m_ClusterIndex.size() : %d") % currentCluster->clusterNo % (int) m_ClusterIndex.size());
+				log_info("m_CurrentTimecode == 0 (a)");
 			}
 		} else {
 			m_CurrentTimecode = MAX_UINT64;
@@ -2379,7 +2386,7 @@ uint64 MatroskaAudioParser::GetClusterTimecode(uint64 filePos) {
 		ElementPtr ElementLevel3;
 		ElementPtr NullElement;
 
-		m_IOCallback.setFilePointer(filePos);
+		m_IOCallback->setFilePointer(filePos);
 		// Find the element data
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)

@@ -246,8 +246,41 @@ class MatroskaTrackInfo {
 
 typedef boost::shared_ptr<MatroskaMetaSeekClusterEntry> cluster_entry_ptr;
 
-// TO_DO:
-class file_info {};
+class replaygain_info {};
+
+	//! Collects information about a file.
+class file_info {
+public:
+		//! Adds or overwrites technical info entry.
+	size_t info_set(const char *name, const char *value);
+
+	bool info_set_replaygain(const char *name, const char *value);
+
+		//! Gets number of metadata entries.
+	size_t meta_get_count() const;
+
+		//! Gets name of metadata entry i.
+	const char *meta_enum_name(size_t i) const;
+
+		//! Gets number of values in metadata entry i (always >= 1).
+	size_t meta_enum_value_count(size_t i) const;
+
+		//! Gets value j from metadata entry i.
+	const char *meta_enum_value(size_t i, size_t j) const;
+
+	const char *meta_get(const char *name, size_t i) const;
+
+		//! Adds or overwrites metadata entry for name.
+	size_t meta_set(const char *name, const char *value);
+
+	size_t meta_add(const char *name, const char *value);
+
+		//! Gets replay gain.
+	replaygain_info get_replaygain() const;
+
+		//! Sets replay gain.
+	void set_replaygain(const replaygain_info &info);
+};
 
 class MatroskaAudioParser {
 public:
@@ -354,6 +387,7 @@ protected:
 	void SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags);
 		
 
+        std::string m_filename;
 	boost::scoped_ptr<IOCallback> m_IOCallback;
 	EbmlStream m_InputStream;
 	/// The main/base/master element, should be the segment
