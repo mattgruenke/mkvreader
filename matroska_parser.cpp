@@ -45,6 +45,8 @@ using std::string;
 using namespace LIBEBML_NAMESPACE;	
 using namespace LIBMATROSKA_NAMESPACE;
 
+const size_t TextBuffer_Size = 16;
+
 static const char * rg_fields[]=
 {
 	"REPLAYGAIN_GAIN",
@@ -863,7 +865,7 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 {
 	int i, idx;
 	const char *name;	
-        std::string value;
+	std::string value;
 
 	if (m_Chapters.size() == 0)
 	{		
@@ -897,15 +899,15 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 		}
 		// Add the replay_gain tags
 		replaygain_info rg = info.get_replaygain();
-		if (rg.is_track_gain_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_track_gain, 7);
+		if (rg.getTrackGain()) {
+			value = float_to_string(TextBuffer_Size, *rg.getTrackGain(), 7);
 		} else {
 			value.clear();
 		}
 		if (!value.empty())
 			trackTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
-		if (rg.is_track_peak_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_track_peak, 7);
+		if (rg.getTrackPeak()) {
+			value = float_to_string(TextBuffer_Size, *rg.getTrackPeak(), 7);
 		} else {
 			value.clear();
 		}
@@ -951,15 +953,15 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 			}
 		}
 		replaygain_info rg = info.get_replaygain();
-		if (rg.is_album_gain_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_album_gain, 7);
+		if (rg.getAlbumGain()) {
+			value = float_to_string(TextBuffer_Size, *rg.getAlbumGain(), 7);
 		} else {
 			value.clear();
 		}
 		if (!value.empty())
 			trackTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
-		if (rg.is_album_peak_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_album_peak, 7);
+		if (rg.getAlbumPeak()) {
+			value = float_to_string(TextBuffer_Size, *rg.getAlbumPeak(), 7);
 		} else {
 			value.clear();
 		}
@@ -1009,15 +1011,15 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 			}
 		}
 		replaygain_info rg = info.get_replaygain();
-		if (rg.is_track_gain_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_track_gain, 7);
+		if (rg.getTrackGain()) {
+			value = float_to_string(TextBuffer_Size, *rg.getTrackGain(), 7);
 		} else {
 			value.clear();
 		}
 		if (!value.empty())
 			chapterTag->SetTagValue("REPLAYGAIN_GAIN", value.c_str());
-		if (rg.is_track_peak_present()) {
-			value = float_to_string(rg.text_buffer_size, rg.m_track_peak, 7);
+		if (rg.getTrackPeak()) {
+			value = float_to_string(TextBuffer_Size, *rg.getTrackPeak(), 7);
 		} else {
 			value.clear();
 		}
