@@ -53,6 +53,7 @@ static const char * rg_fields[]=
 	"REPLAYGAIN_PEAK"
 };
 
+/*
 static const char * rg_track_fields[]=
 {
 	"REPLAYGAIN_TRACK_GAIN",
@@ -85,6 +86,7 @@ static const char * edition_tag_mapping[][2] =
     //{ "PART_NUMBER", "DISCNUMBER" },
     //{ "TOTAL_DISCS", "TOTALDISCS" }
 };
+*/
 
 static const char * hidden_edition_field[] =
 {
@@ -469,15 +471,13 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 				EbmlElement* tmpElement = ElementLevel2.get();
 				Tracks->Read(m_InputStream, KaxTracks::ClassInfos.Context, UpperElementLevel, tmpElement, bAllowDummy);
 
-				unsigned int Index0;
-				for (Index0 = 0; Index0 < Tracks->ListSize(); Index0++) {
+				for (size_t Index0 = 0; Index0 < Tracks->ListSize(); Index0++) {
 					if ((*Tracks)[Index0]->Generic().GlobalId == KaxTrackEntry::ClassInfos.GlobalId) {
 						KaxTrackEntry &TrackEntry = *static_cast<KaxTrackEntry *>((*Tracks)[Index0]);
 						// Create a new MatroskaTrack
 						MatroskaTrackInfo newTrack;
 						
-						unsigned int Index1;
-						for (Index1 = 0; Index1 < TrackEntry.ListSize(); Index1++) {
+						for (size_t Index1 = 0; Index1 < TrackEntry.ListSize(); Index1++) {
 							if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackNumber::ClassInfos.GlobalId) {
 								KaxTrackNumber &TrackNumber = *static_cast<KaxTrackNumber*>(TrackEntry[Index1]);
 								newTrack.trackNumber = TrackNumber;
@@ -542,8 +542,7 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackAudio::ClassInfos.GlobalId) {
 								KaxTrackAudio &TrackAudio = *static_cast<KaxTrackAudio*>(TrackEntry[Index1]);
 
-								unsigned int Index2;
-								for (Index2 = 0; Index2 < TrackAudio.ListSize(); Index2++) {
+								for (size_t Index2 = 0; Index2 < TrackAudio.ListSize(); Index2++) {
 									if (TrackAudio[Index2]->Generic().GlobalId == KaxAudioBitDepth::ClassInfos.GlobalId) {
 										KaxAudioBitDepth &AudioBitDepth = *static_cast<KaxAudioBitDepth*>(TrackAudio[Index2]);
 										newTrack.bitsPerSample = AudioBitDepth;
@@ -886,7 +885,7 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 		int metaDataCount = info.meta_get_count();
 		for (i = 0; i < metaDataCount; i++)
 		{
-			for (int j = 0; j != info.meta_enum_value_count(i); ++j) {
+			for (size_t j = 0; j != info.meta_enum_value_count(i); ++j) {
 				name = info.meta_enum_name(i);
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
@@ -934,7 +933,7 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 		int metaDataCount = info.meta_get_count();
 		for (i = 0; i < metaDataCount; i++)
 		{
-			for (int j = 0; j != info.meta_enum_value_count(i); ++j) {
+			for (size_t j = 0; j != info.meta_enum_value_count(i); ++j) {
 				name = info.meta_enum_name(i);
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
@@ -992,7 +991,7 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 		int metaDataCount = info.meta_get_count();
 		for (i = 0; i < metaDataCount; i++)
 		{
-			for (int j = 0; j != info.meta_enum_value_count(i); ++j) {
+			for (size_t j = 0; j != info.meta_enum_value_count(i); ++j) {
 				name = info.meta_enum_name(i);
 				value = info.meta_enum_value(i, j);
 				//idx = meta_get_num(info, name, i);
@@ -1137,8 +1136,7 @@ uint32 MatroskaAudioParser::GetAudioTrackIndex(uint32 index)
 
 static bool is_rg_field(const char * name)
 {
-	int m;
-	for (m = 0; m < tabsize(rg_fields); m++)
+	for (size_t m = 0; m < tabsize(rg_fields); m++)
 	{
 		if (!strcasecmp(name,rg_fields[m])) return true;
 	}
@@ -1147,7 +1145,7 @@ static bool is_rg_field(const char * name)
 
 static bool is_hidden_edition_field(const char * name)
 {
-	for (int i = 0; i < tabsize(hidden_edition_field); i++)
+	for (size_t i = 0; i < tabsize(hidden_edition_field); i++)
 		if (!strcasecmp(name, hidden_edition_field[i]))
 			return true;
 	return false;
@@ -1155,7 +1153,7 @@ static bool is_hidden_edition_field(const char * name)
 
 static bool is_hidden_chapter_field(const char * name)
 {
-	for (int i = 0; i < tabsize(hidden_chapter_field); i++)
+	for (size_t i = 0; i < tabsize(hidden_chapter_field); i++)
 		if (!strcasecmp(name, hidden_chapter_field[i]))
 			return true;
 	return false;
@@ -1166,6 +1164,7 @@ static bool IsTagNamed(const MatroskaSimpleTag &currentSimpleTag, const char * n
 	return !strcasecmp(currentSimpleTag.name.GetUTF8().c_str(), name);
 }
 
+/*
 static bool IsTagValued(const MatroskaSimpleTag &currentSimpleTag, const char * value)
 {
 	return !strcmp(currentSimpleTag.value.GetUTF8().c_str(), value);
@@ -1175,16 +1174,19 @@ static bool AreTagsNameEqual(const MatroskaSimpleTag &tag1, const MatroskaSimple
 {
 	return !strcasecmp(tag1.name.GetUTF8().c_str(), tag2.name.GetUTF8().c_str());
 }
+*/
 
 static bool AreTagsValueEqual(const MatroskaSimpleTag &tag1, const MatroskaSimpleTag &tag2)
 {
 	return !strcmp(tag1.value.GetUTF8().c_str(), tag2.value.GetUTF8().c_str());
 }
 
+/*
 static bool AreTagsEqual(const MatroskaSimpleTag &tag1, const MatroskaSimpleTag &tag2)
 {
 	return AreTagsNameEqual(tag1,tag2) && AreTagsValueEqual(tag1,tag2);
 }
+*/
 
 const MatroskaSimpleTag* GetTagWithName(MatroskaTagInfo *SimpleTags, const char * name)
 {
@@ -1550,8 +1552,8 @@ void MatroskaAudioParser::SetSubSong(int subsong)
 	m_CurrentChapter = NULL;
 	if(m_Editions.size() > 0)
 		m_CurrentEdition = &m_Editions.at(0);
-	if (m_Chapters.size() > subsong)
-		m_CurrentChapter = &m_Chapters.at(subsong);
+	if (subsong < 0 || m_Chapters.size() > (size_t) subsong)
+		m_CurrentChapter = &m_Chapters.at((size_t) subsong);
 	
 };
 
@@ -1622,8 +1624,6 @@ uint64 MatroskaAudioParser::get_current_frame_timecode()
 
 bool MatroskaAudioParser::Seek(double seconds,unsigned & frames_to_skip,double & time_to_skip,unsigned samplerate_hint)
 {
-	int64 ret = 0;
-
 	if (m_CurrentChapter != NULL) {
 		seconds += (double)(int64)m_CurrentChapter->timeStart / 1000000000; // ns -> seconds
 	}
@@ -1637,9 +1637,7 @@ bool MatroskaAudioParser::Seek(double seconds,unsigned & frames_to_skip,double &
 
 	flush_queue();
 	m_CurrentTimecode = seekToTimecode;
-	if (FillQueue()!=0) return false;
-	return true;
-
+	return FillQueue() == 0;
 };
 
 MatroskaAudioFrame * MatroskaAudioParser::ReadSingleFrame()
@@ -1776,13 +1774,12 @@ void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom)
 
 void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters)
 {
-	int i, j;
 	EbmlElement *Element = NULL;
 	MatroskaChapterInfo newChapter;
 
 	NOTE("New chapter");
 
-	for (i = 0; i < ChapterAtom->ListSize(); i++)
+	for (size_t i = 0; i < ChapterAtom->ListSize(); i++)
 	{	
 		Element = (*ChapterAtom)[i];
 				
@@ -1805,7 +1802,7 @@ void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::v
 		{
 			KaxChapterTrack *ChapterTrack = (KaxChapterTrack *)Element;
 			
-			for (j = 0; j < ChapterTrack->ListSize(); j++)
+			for (size_t j = 0; j < ChapterTrack->ListSize(); j++)
 			{
 				Element = (*ChapterTrack)[j];
 				if(IS_ELEMENT_ID(KaxChapterTrackNumber))
@@ -1828,7 +1825,7 @@ void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::v
 			MatroskaChapterDisplayInfo newChapterDisplay;							
 			KaxChapterDisplay *ChapterDisplay = (KaxChapterDisplay *)Element;
 			
-			for (j = 0; j < ChapterDisplay->ListSize(); j++) {
+			for (size_t j = 0; j < ChapterDisplay->ListSize(); j++) {
 				Element = (*ChapterDisplay)[j];
 				if(IS_ELEMENT_ID(KaxChapterString))
 				{
@@ -1862,7 +1859,6 @@ void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::v
 
 void MatroskaAudioParser::Parse_Chapters(KaxChapters *chaptersElement)
 {
-	int i, j;	
 	EbmlElement *Element = NULL;	
 	int UpperEltFound = 0;
 
@@ -1874,14 +1870,14 @@ void MatroskaAudioParser::Parse_Chapters(KaxChapters *chaptersElement)
 	chaptersElement->Read(m_InputStream, KaxChapters::ClassInfos.Context,
 		UpperEltFound, Element, true);
 
-	for (i = 0; i < chaptersElement->ListSize(); i++)
+	for (size_t i = 0; i < chaptersElement->ListSize(); i++)
 	{
 		Element = (*chaptersElement)[i];
 		if(IS_ELEMENT_ID(KaxEditionEntry))
 		{
 			MatroskaEditionInfo newEdition;
 			KaxEditionEntry *edition = (KaxEditionEntry *)Element;
-			for (j = 0; j < edition->ListSize(); j++)
+			for (size_t j = 0; j < edition->ListSize(); j++)
 			{
 				Element = (*edition)[j];
 				if(IS_ELEMENT_ID(KaxEditionUID))
@@ -1905,7 +1901,6 @@ void MatroskaAudioParser::Parse_Chapters(KaxChapters *chaptersElement)
 
 void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 {
-	int i, j, k;
 	EbmlElement *Element = NULL;
 	int UpperEltFound = 0;
 
@@ -1917,7 +1912,7 @@ void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 
 	tagsElement->Read(m_InputStream, KaxTags::ClassInfos.Context, UpperEltFound, Element, true);
 
-	for (i = 0; i < tagsElement->ListSize(); i++)
+	for (size_t i = 0; i < tagsElement->ListSize(); i++)
 	{
 		Element = (*tagsElement)[i];
 		if(IS_ELEMENT_ID(KaxTag))
@@ -1926,13 +1921,13 @@ void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 			newTag.targetTypeValue = 50;
 			KaxTag *tagElement = (KaxTag*)Element;
 			NOTE("New Tag");
-			for (j = 0; j < tagElement->ListSize(); j++)
+			for (size_t j = 0; j < tagElement->ListSize(); j++)
 			{
 				Element = (*tagElement)[j];
 				if(IS_ELEMENT_ID(KaxTagTargets))
 				{
 					KaxTagTargets *tagTargetsElement = (KaxTagTargets*)Element;					
-					for (k = 0; k < tagTargetsElement->ListSize(); k++)
+					for (size_t k = 0; k < tagTargetsElement->ListSize(); k++)
 					{
 						Element = (*tagTargetsElement)[k];
 						if(IS_ELEMENT_ID(KaxTagTrackUID))
@@ -1972,7 +1967,7 @@ void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
 					MatroskaSimpleTag newSimpleTag;
 					KaxTagSimple *tagSimpleElement = (KaxTagSimple*)Element;
 					NOTE("New SimpleTag");
-					for (k = 0; k < tagSimpleElement->ListSize(); k++)
+					for (size_t k = 0; k < tagSimpleElement->ListSize(); k++)
 					{
 						Element = (*tagSimpleElement)[k];
 						if(IS_ELEMENT_ID(KaxTagName))
@@ -2428,7 +2423,7 @@ uint64 MatroskaAudioParser::GetClusterTimecode(uint64 filePos) {
 					//ElementLevel2 = NULL;
 					//_DELETE(ElementLevel2);
 					ElementLevel2 = NullElement;
-					if (ret == -1)
+					if (ret == MAX_UINT64)
 						ElementLevel2 = ElementPtr(m_InputStream.FindNextElement(ElementLevel1->Generic().Context, UpperElementLevel, ElementLevel1->ElementSize(), false));
 				}
 			}
