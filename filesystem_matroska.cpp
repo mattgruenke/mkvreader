@@ -1,5 +1,6 @@
 #include "filesystem_matroska.h"
 
+#if 0
 bool filesystem_matroska::get_canonical_path(const char * p_path,pfc::string_base & p_out)
 {
 	if (is_our_path(p_path)) {
@@ -144,3 +145,4 @@ bool filesystem_matroska::supports_content_types()
 {
     return false;
 }
+#endif
