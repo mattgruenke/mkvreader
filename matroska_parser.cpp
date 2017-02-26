@@ -1531,7 +1531,7 @@ void MatroskaAudioParser::MarkHiddenTags()
 	// do nothing, so we will only mark hidden tags.
 	// Hidden tag will be copied to keep track of them.
 	// This is needed cause tag are read and written in 2 different instances
-	file_info_impl info;
+	file_info info;
 	SetFB2KInfo(info, 0);
 };
 
