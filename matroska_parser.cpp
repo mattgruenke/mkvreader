@@ -2535,7 +2535,9 @@ cluster_entry_ptr MatroskaAudioParser::FindCluster(uint64 timecode)
 		if (correctEntry != NULL)
 			NOTE3("MatroskaAudioParser::FindCluster(timecode = %u) seeking to cluster %i at %u", (uint32)(timecode / m_TimecodeScale), (uint32)correctEntry->clusterNo, (uint32)correctEntry->filePos);
 		else
+		{
 			NOTE1("MatroskaAudioParser::FindCluster(timecode = %u) seeking failed", (uint32)(timecode / m_TimecodeScale));
+		}
 
 		return correctEntry;
 	} catch (...) {
