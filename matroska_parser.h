@@ -300,18 +300,22 @@ public:
 	/// \return 0 File parsed ok
 	/// \return 1 Failed
 	int Parse(bool bInfoOnly = false, bool bBreakAtClusters = true);
+
 	/// Writes the tags to the current matroska file
 	/// \param info All the tags we need to write
 	/// \return 0 Tags written A OK
 	/// \return 1 Failed to write tags
-	int WriteTags();
+//	int WriteTags();
+
 	/// Set the info tags to the current tags file in memory
-	void SetTags(const file_info &info);
+//	void SetTags(const file_info &info);
 
 	MatroskaTrackInfo &GetTrack(uint16 trackNo) { return m_Tracks.at(trackNo); };
 	uint64 GetTimecodeScale() { return m_TimecodeScale; };
+
 	/// Returns an adjusted duration of the file
 	double GetDuration();
+
 	/// Returns the track index of the first decodable track
 	int32 GetFirstAudioTrack();
 
@@ -320,13 +324,14 @@ public:
 
 	/// Set the fb2k info from the matroska file
 	/// \param info This will be filled up with tags ;)
-	bool SetFB2KInfo(file_info &info, uint32_t p_subsong);
+//	bool SetFB2KInfo(file_info &info, uint32_t p_subsong);
 
 	/// Get the foobar2000 style format string
 //	const char *GetFoobar2000Format(uint16 trackNo, bool bSetupCodecPrivate = true);
 
 	/// Set the current track to read data from
 	void SetCurrentTrack(uint32 newTrackNo);
+
 	/// Set the subsong to play, this adjusts all the duration/timecodes 
 	/// reported in public functions. So only use this if you are expecting that to happen
 	/// \param subsong This should be within the range of the chapters vector
@@ -339,6 +344,7 @@ public:
 	uint32 GetAudioTrackIndex(uint32 index);
 
 	int32 GetAvgBitrate();
+
 	/// Seek to a position
 	/// \param seconds The absolute position to seek to, in seconds			
 	/// \return Current postion offset from where it was requested
@@ -355,6 +361,7 @@ public:
 	/// \return 0 If read ok	
 	/// \return 1 If file could not be read or it not open	
 	/// \return 2 End of track (EOT)
+
 	MatroskaAudioFrame * ReadSingleFrame();
     MatroskaAudioFrame * ReadFirstFrame();
 
@@ -390,10 +397,10 @@ protected:
 	bool AreTagsIdenticalAtAllLevels(const char * name);
 	bool AreTagsIdenticalAtEditionLevel(const char * name);
 	bool AreTagsIdenticalAtChapterLevel(const char * name);
-	void MarkHiddenTags();
+//	void MarkHiddenTags();
 
-	void SetAlbumTags(file_info &info, MatroskaTagInfo* AlbumTags, MatroskaTagInfo* TrackTags);
-	void SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags);
+//	void SetAlbumTags(file_info &info, MatroskaTagInfo* AlbumTags, MatroskaTagInfo* TrackTags);
+//	void SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags);
 		
 
         std::string m_filename;

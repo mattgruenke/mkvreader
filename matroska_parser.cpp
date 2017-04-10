@@ -32,6 +32,7 @@
 
 #include "matroska_parser.h"
 
+#include <iostream>
 #include <cmath>
 #include <string>
 #include <algorithm>
@@ -44,6 +45,9 @@ using std::string;
 
 using namespace LIBEBML_NAMESPACE;	
 using namespace LIBMATROSKA_NAMESPACE;
+
+
+#define LOG_ERROR_S( s )     (std::cerr << s << "\n")
 
 const size_t TextBuffer_Size = 16;
 
@@ -290,6 +294,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		// Find the EbmlHead element. Must be the first one.
 		m_ElementLevel0 = ElementPtr(m_InputStream.FindNextID(EbmlHead::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (m_ElementLevel0 == NullElement) {
+			LOG_ERROR_S( "No EbmlHead/level 0 element found." );
 			return 1;
 		}
 		//We must have found the EBML head :)
@@ -300,13 +305,14 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		// Next element must be a segment
 		m_ElementLevel0 = ElementPtr(m_InputStream.FindNextID(KaxSegment::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (m_ElementLevel0 == NullElement) {
-			//No segment/level 0 element found.
+			LOG_ERROR_S( "No segment/level 0 element found." );
 			return 1;
 		}
 		if (!(EbmlId(*m_ElementLevel0) == KaxSegment::ClassInfos.GlobalId)) {
 			//delete m_ElementLevel0;
 			//m_ElementLevel0 = NULL;
 			//_DELETE(m_ElementLevel0);
+			LOG_ERROR_S( "MatroskaParser::Parse() ElementLevel0 != Segment." );
 			return 1;
 		}
 
@@ -680,9 +686,9 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		//_DELETE(ElementLevel3);
 		//_DELETE(ElementLevel2);
 		//_DELETE(ElementLevel1);
-	} catch (std::exception &) {
+	} catch (std::exception &e) {
+		LOG_ERROR_S( "MatroskaParser::Parse() got exception: " << e.what() );
 		return 1;
-
 	} catch (...) {
 		return 1;
 	}
@@ -691,6 +697,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 	return 0;
 };
 
+#if 0   // Not supporting this, for now.
 //int MatroskaParser::WriteTags(const file_info & info)
 int MatroskaParser::WriteTags()
 {
@@ -823,8 +830,10 @@ int MatroskaParser::WriteTags()
 	}
 	return 0;
 };
+#endif
 
-int meta_get_num(const file_info &info, const char* name, int idx)
+#if 0   // Not supporting this, for now.
+static int meta_get_num(const file_info &info, const char* name, int idx)
 {
 //	assert(pfc::is_valid_utf8(name));
 	int n, m = std::min(info.meta_get_count(), (size_t) idx);
@@ -837,7 +846,7 @@ int meta_get_num(const file_info &info, const char* name, int idx)
 	return rv;
 }
 
-bool isEditionTag(const char * name) {
+static bool isEditionTag(const char * name) {
 	if (starts_with(name, "ALBUM") ||
 		starts_with(name, "SUBALBUM") ||
 		starts_with(name, "DISCID") ||
@@ -1027,6 +1036,7 @@ void MatroskaParser::SetTags(const file_info &info)
 		chapterTag->RemoveMarkedTags();
 	}
 };
+#endif
 
 MatroskaTagInfo *MatroskaParser::FindTagWithTrackUID(uint64 trackUID) 
 {
@@ -1301,6 +1311,7 @@ bool MatroskaParser::AreTagsIdenticalAtChapterLevel(const char * name)
 	return AtLeastOneChapter;
 }
 
+#if 0
 void MatroskaParser::SetAlbumTags(file_info & info,
 									   MatroskaTagInfo* AlbumTags,
 									   MatroskaTagInfo* TrackTags)
@@ -1429,6 +1440,7 @@ void MatroskaParser::SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags)
 		}
 	}
 }
+#endif
 
 
 static uint64_t time_to_samples(double time, uint32_t sample_rate) {
@@ -1446,6 +1458,7 @@ static std::string cuesheet_format_index_time(double time) {
 }
 
 
+#if 0
 bool MatroskaParser::SetFB2KInfo(file_info &info, uint32_t p_subsong)
 {
 	if (m_MuxingApp.length() > 0)
@@ -1536,6 +1549,7 @@ void MatroskaParser::MarkHiddenTags()
 	file_info info;
 	SetFB2KInfo(info, 0);
 };
+#endif
 
 void MatroskaParser::SetCurrentTrack(uint32 newTrackNo)
 {
@@ -2037,7 +2051,10 @@ int MatroskaParser::FillQueue()
 	if (IsSeekable(*m_IOCallback)) {
 		cluster_entry_ptr currentCluster = FindCluster(m_CurrentTimecode);
 		if (currentCluster.get() == NULL)
+		{
+			LOG_ERROR_S( "MatroskaParser::FillQueue(): can't find cluster at current timecode: " << m_CurrentTimecode );
 			return 2;
+		}
 		int64 clusterFilePos = currentCluster->filePos;
 
 		//log_info(uStringPrintf("cluster %d", currentCluster->clusterNo));
@@ -2046,7 +2063,10 @@ int MatroskaParser::FillQueue()
 		// Find the element data
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)
+		{
+			LOG_ERROR_S( "MatroskaParser::FillQueue(): got NullElement" );
 			return 1;
+		}
 
 		if (EbmlId(*ElementLevel1) == KaxCluster::ClassInfos.GlobalId) {
 			KaxCluster *SegmentCluster = static_cast<KaxCluster *>(ElementLevel1.get());
@@ -2246,7 +2266,10 @@ int MatroskaParser::FillQueue()
 		// Find the element data
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)
+		{
+			LOG_ERROR_S( "MatroskaParser::FillQueue(): got NullElement" );
 			return 1;
+		}
 
 		if (EbmlId(*ElementLevel1) == KaxCluster::ClassInfos.GlobalId) {
 			KaxCluster *SegmentCluster = static_cast<KaxCluster *>(ElementLevel1.get());
