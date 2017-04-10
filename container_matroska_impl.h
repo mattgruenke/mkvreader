@@ -7,7 +7,7 @@
 #include "matroska_parser.h"
 #include "container_matroska.h"
 
-typedef boost::shared_ptr<MatroskaAudioParser> matroska_parser_ptr;
+typedef boost::shared_ptr<MatroskaParser> matroska_parser_ptr;
 
 class container_matroska_impl : public container_matroska
 {

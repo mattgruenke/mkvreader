@@ -291,10 +291,10 @@ public:
 	void set_replaygain(const replaygain_info &info);
 };
 
-class MatroskaAudioParser {
+class MatroskaParser {
 public:
-	MatroskaAudioParser(const char *filename, abort_callback & p_abort);
-	~MatroskaAudioParser();
+	MatroskaParser(const char *filename, abort_callback & p_abort);
+	~MatroskaParser();
 
 	/// The main header parsing function
 	/// \return 0 File parsed ok
@@ -438,11 +438,11 @@ protected:
 	//int UpperElementLevel;
 private:
 	// We have no need for these
-	//MatroskaAudioParser(const MatroskaAudioParser &refParser) { };
-	//MatroskaAudioParser &operator=(const MatroskaAudioParser &refParser) { return *this; };
+	//MatroskaParser(const MatroskaParser &refParser) { };
+	//MatroskaParser &operator=(const MatroskaParser &refParser) { return *this; };
 };
 
-typedef boost::shared_ptr<MatroskaAudioParser> matroska_parser_ptr;
+typedef boost::shared_ptr<MatroskaParser> matroska_parser_ptr;
 
 void PrintChapters(std::vector<MatroskaChapterInfo> &theChapters);
 

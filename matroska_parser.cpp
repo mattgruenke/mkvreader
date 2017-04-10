@@ -107,12 +107,12 @@ static bool IsSeekable(const IOCallback &cb)
     return true;    // since we're using StdIOCallback, it's always seekable.
 }
 
-uint64 MatroskaAudioParser::SecondsToTimecode(double seconds)
+uint64 MatroskaParser::SecondsToTimecode(double seconds)
 {
 	return (uint64)floor(seconds * 1000000000);
 };
 
-double MatroskaAudioParser::TimecodeToSeconds(uint64 code,unsigned samplerate_hint)
+double MatroskaParser::TimecodeToSeconds(uint64 code,unsigned samplerate_hint)
 {
 	return ((double)(int64)code / 1000000000);
 };
@@ -238,7 +238,7 @@ MatroskaTrackInfo::MatroskaTrackInfo() {
 	codecPrivateReady = false;
 };
 
-MatroskaAudioParser::MatroskaAudioParser(const char *filename, abort_callback & p_abort) 
+MatroskaParser::MatroskaParser(const char *filename, abort_callback & p_abort) 
 	:
 		m_filename(filename),
 		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode
@@ -259,7 +259,7 @@ MatroskaAudioParser::MatroskaAudioParser(const char *filename, abort_callback & 
 	m_CurrentTrackNo = 0;
 };
 
-MatroskaAudioParser::~MatroskaAudioParser() {
+MatroskaParser::~MatroskaParser() {
 	//if (m_ElementLevel0 != NULL)
 	//	_DELETE(m_ElementLevel0);
 		//delete m_ElementLevel0;
@@ -272,7 +272,7 @@ MatroskaAudioParser::~MatroskaAudioParser() {
 	}
 };
 
-int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters) 
+int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters) 
 {
 	try {
 		int UpperElementLevel = 0;
@@ -691,8 +691,8 @@ int MatroskaAudioParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 	return 0;
 };
 
-//int MatroskaAudioParser::WriteTags(const file_info & info)
-int MatroskaAudioParser::WriteTags()
+//int MatroskaParser::WriteTags(const file_info & info)
+int MatroskaParser::WriteTags()
 {
 	KaxTags & MyKaxTags = GetChild<KaxTags>(*static_cast<EbmlMaster *>(m_ElementLevel0.get()));
 
@@ -860,7 +860,7 @@ static std::string float_to_string(size_t out_max, double val, unsigned precisio
 }
 
 
-void MatroskaAudioParser::SetTags(const file_info &info)
+void MatroskaParser::SetTags(const file_info &info)
 {
 	int i, idx;
 	const char *name;	
@@ -1028,7 +1028,7 @@ void MatroskaAudioParser::SetTags(const file_info &info)
 	}
 };
 
-MatroskaTagInfo *MatroskaAudioParser::FindTagWithTrackUID(uint64 trackUID) 
+MatroskaTagInfo *MatroskaParser::FindTagWithTrackUID(uint64 trackUID) 
 {
 	MatroskaTagInfo *foundTag = NULL;
 
@@ -1048,7 +1048,7 @@ MatroskaTagInfo *MatroskaAudioParser::FindTagWithTrackUID(uint64 trackUID)
 	return foundTag;
 };
 
-MatroskaTagInfo *MatroskaAudioParser::FindTagWithEditionUID(uint64 editionUID, uint64 trackUID)
+MatroskaTagInfo *MatroskaParser::FindTagWithEditionUID(uint64 editionUID, uint64 trackUID)
 {
 	MatroskaTagInfo *foundTag = NULL;
 
@@ -1066,7 +1066,7 @@ MatroskaTagInfo *MatroskaAudioParser::FindTagWithEditionUID(uint64 editionUID, u
 	return foundTag;
 };
 
-MatroskaTagInfo *MatroskaAudioParser::FindTagWithChapterUID(uint64 chapterUID, uint64 trackUID)
+MatroskaTagInfo *MatroskaParser::FindTagWithChapterUID(uint64 chapterUID, uint64 trackUID)
 {
 	MatroskaTagInfo *foundTag = NULL;
 
@@ -1084,7 +1084,7 @@ MatroskaTagInfo *MatroskaAudioParser::FindTagWithChapterUID(uint64 chapterUID, u
 	return foundTag;
 };
 
-double MatroskaAudioParser::GetDuration() { 
+double MatroskaParser::GetDuration() { 
 	if (m_CurrentChapter != NULL) {
 		return TimecodeToSeconds(m_CurrentChapter->timeEnd - m_CurrentChapter->timeStart);
 	};
@@ -1094,7 +1094,7 @@ double MatroskaAudioParser::GetDuration() {
 	}
 };
 
-int32 MatroskaAudioParser::GetFirstAudioTrack()
+int32 MatroskaParser::GetFirstAudioTrack()
 {
 	for (uint16 t = 0; t < m_Tracks.size(); t++)
 	{
@@ -1104,7 +1104,7 @@ int32 MatroskaAudioParser::GetFirstAudioTrack()
 	return -1;
 }
 
-uint32 MatroskaAudioParser::GetAudioTrackCount()
+uint32 MatroskaParser::GetAudioTrackCount()
 {
 	uint32 count = 0;
 	for (uint16 t = 0; t < m_Tracks.size(); t++)
@@ -1116,7 +1116,7 @@ uint32 MatroskaAudioParser::GetAudioTrackCount()
 	return count;
 }
 
-uint32 MatroskaAudioParser::GetAudioTrackIndex(uint32 index)
+uint32 MatroskaParser::GetAudioTrackIndex(uint32 index)
 {
 	uint32 idx = 0;
 	for (uint16 t = 0; t < m_Tracks.size(); t++)
@@ -1230,7 +1230,7 @@ bool TagExistsAtChapterLevel(MatroskaTagInfo *ChapterTags, const char * name)
 	return false;
 }
 
-bool MatroskaAudioParser::AreTagsIdenticalAtAllLevels(const char * name)
+bool MatroskaParser::AreTagsIdenticalAtAllLevels(const char * name)
 {
 	const MatroskaSimpleTag* ReferenceTag = NULL;
 	bool AtLeastOneChapter = false;
@@ -1251,7 +1251,7 @@ bool MatroskaAudioParser::AreTagsIdenticalAtAllLevels(const char * name)
 	return AtLeastOneChapter;
 }
 
-bool MatroskaAudioParser::AreTagsIdenticalAtEditionLevel(const char * name)
+bool MatroskaParser::AreTagsIdenticalAtEditionLevel(const char * name)
 {
 	const MatroskaSimpleTag* ReferenceTag = NULL;
 	bool AtLeastOneChapter = false;
@@ -1276,7 +1276,7 @@ bool MatroskaAudioParser::AreTagsIdenticalAtEditionLevel(const char * name)
 	return AtLeastOneChapter;
 }
 
-bool MatroskaAudioParser::AreTagsIdenticalAtChapterLevel(const char * name)
+bool MatroskaParser::AreTagsIdenticalAtChapterLevel(const char * name)
 {
 	const MatroskaSimpleTag* ReferenceTag = NULL;
 	bool AtLeastOneChapter = false;
@@ -1301,7 +1301,7 @@ bool MatroskaAudioParser::AreTagsIdenticalAtChapterLevel(const char * name)
 	return AtLeastOneChapter;
 }
 
-void MatroskaAudioParser::SetAlbumTags(file_info & info,
+void MatroskaParser::SetAlbumTags(file_info & info,
 									   MatroskaTagInfo* AlbumTags,
 									   MatroskaTagInfo* TrackTags)
 {
@@ -1385,7 +1385,7 @@ void MatroskaAudioParser::SetAlbumTags(file_info & info,
 	}
 }
 
-void MatroskaAudioParser::SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags)
+void MatroskaParser::SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags)
 {
 	if(TrackTags == NULL)
 		return;
@@ -1446,7 +1446,7 @@ static std::string cuesheet_format_index_time(double time) {
 }
 
 
-bool MatroskaAudioParser::SetFB2KInfo(file_info &info, uint32_t p_subsong)
+bool MatroskaParser::SetFB2KInfo(file_info &info, uint32_t p_subsong)
 {
 	if (m_MuxingApp.length() > 0)
 		info.info_set("MUXING_APP", m_MuxingApp.GetUTF8().c_str());
@@ -1527,9 +1527,9 @@ bool MatroskaAudioParser::SetFB2KInfo(file_info &info, uint32_t p_subsong)
 	return true;
 };
 
-void MatroskaAudioParser::MarkHiddenTags()
+void MatroskaParser::MarkHiddenTags()
 {
-	// We call MatroskaAudioParser::SetFB2KInfo with a dummy file_info that
+	// We call MatroskaParser::SetFB2KInfo with a dummy file_info that
 	// do nothing, so we will only mark hidden tags.
 	// Hidden tag will be copied to keep track of them.
 	// This is needed cause tag are read and written in 2 different instances
@@ -1537,7 +1537,7 @@ void MatroskaAudioParser::MarkHiddenTags()
 	SetFB2KInfo(info, 0);
 };
 
-void MatroskaAudioParser::SetCurrentTrack(uint32 newTrackNo)
+void MatroskaParser::SetCurrentTrack(uint32 newTrackNo)
 {
 	m_CurrentTrackNo = newTrackNo;
 	// Clear the current queue (we are changing tracks)
@@ -1545,7 +1545,7 @@ void MatroskaAudioParser::SetCurrentTrack(uint32 newTrackNo)
 		m_Queue.pop();
 };
 
-void MatroskaAudioParser::SetSubSong(int subsong)
+void MatroskaParser::SetSubSong(int subsong)
 {
 	// As we don't (yet?) use several Editions, select the first (default) one as the current one.
 	m_CurrentEdition = NULL;
@@ -1557,7 +1557,7 @@ void MatroskaAudioParser::SetSubSong(int subsong)
 	
 };
 
-int32 MatroskaAudioParser::GetAvgBitrate() 
+int32 MatroskaParser::GetAvgBitrate() 
 { 
 	double ret = 0;
 	ret = static_cast<double>(int64(m_FileSize)) / 1024;
@@ -1566,7 +1566,7 @@ int32 MatroskaAudioParser::GetAvgBitrate()
 	return static_cast<int32>(ret);
 };
 
-bool MatroskaAudioParser::skip_frames_until(double destination,unsigned & frames,double & last_timecode_delta,unsigned hint_samplerate)
+bool MatroskaParser::skip_frames_until(double destination,unsigned & frames,double & last_timecode_delta,unsigned hint_samplerate)
 {
 	unsigned done = 0;
 	unsigned last_laced = 0;
@@ -1602,7 +1602,7 @@ bool MatroskaAudioParser::skip_frames_until(double destination,unsigned & frames
 }
 
 
-void MatroskaAudioParser::flush_queue()
+void MatroskaParser::flush_queue()
 {
 	while (!m_Queue.empty()) {
 		MatroskaAudioFrame *currentPacket = m_Queue.front();
@@ -1612,7 +1612,7 @@ void MatroskaAudioParser::flush_queue()
 	}
 }
 
-uint64 MatroskaAudioParser::get_current_frame_timecode()
+uint64 MatroskaParser::get_current_frame_timecode()
 {
 	if (m_Queue.empty())
 	{
@@ -1622,7 +1622,7 @@ uint64 MatroskaAudioParser::get_current_frame_timecode()
 	return m_Queue.front()->timecode;
 }
 
-bool MatroskaAudioParser::Seek(double seconds,unsigned & frames_to_skip,double & time_to_skip,unsigned samplerate_hint)
+bool MatroskaParser::Seek(double seconds,unsigned & frames_to_skip,double & time_to_skip,unsigned samplerate_hint)
 {
 	if (m_CurrentChapter != NULL) {
 		seconds += (double)(int64)m_CurrentChapter->timeStart / 1000000000; // ns -> seconds
@@ -1640,7 +1640,7 @@ bool MatroskaAudioParser::Seek(double seconds,unsigned & frames_to_skip,double &
 	return FillQueue() == 0;
 };
 
-MatroskaAudioFrame * MatroskaAudioParser::ReadSingleFrame()
+MatroskaAudioFrame * MatroskaParser::ReadSingleFrame()
 {
 	for(;;)
 	{
@@ -1655,7 +1655,7 @@ MatroskaAudioFrame * MatroskaAudioParser::ReadSingleFrame()
 	}
 };
 
-MatroskaAudioFrame * MatroskaAudioParser::ReadFirstFrame()
+MatroskaAudioFrame * MatroskaParser::ReadFirstFrame()
 {
     m_CurrentTimecode = 0;
     return ReadSingleFrame();
@@ -1663,7 +1663,7 @@ MatroskaAudioFrame * MatroskaAudioParser::ReadFirstFrame()
 
 typedef boost::shared_ptr<EbmlId> EbmlIdPtr;
 
-void MatroskaAudioParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly) 
+void MatroskaParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly) 
 {
 //    TIMER;
 	uint64 lastSeekPos = 0;
@@ -1767,12 +1767,12 @@ void MatroskaAudioParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoO
 
 #define IS_ELEMENT_ID(__x__) (Element->Generic().GlobalId == __x__::ClassInfos.GlobalId)
 
-void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom)
+void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom)
 {
 	Parse_Chapter_Atom(ChapterAtom, m_Chapters);
 }
 
-void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters)
+void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters)
 {
 	EbmlElement *Element = NULL;
 	MatroskaChapterInfo newChapter;
@@ -1857,7 +1857,7 @@ void MatroskaAudioParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::v
 		p_chapters.push_back(newChapter);
 }
 
-void MatroskaAudioParser::Parse_Chapters(KaxChapters *chaptersElement)
+void MatroskaParser::Parse_Chapters(KaxChapters *chaptersElement)
 {
 	EbmlElement *Element = NULL;	
 	int UpperEltFound = 0;
@@ -1899,7 +1899,7 @@ void MatroskaAudioParser::Parse_Chapters(KaxChapters *chaptersElement)
 	FixChapterEndTimes();
 }
 
-void MatroskaAudioParser::Parse_Tags(KaxTags *tagsElement)
+void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 {
 	EbmlElement *Element = NULL;
 	int UpperEltFound = 0;
@@ -2017,11 +2017,11 @@ static void log_info( const std::string &str )
 }
 
 
-int MatroskaAudioParser::FillQueue() 
+int MatroskaParser::FillQueue() 
 {
 	flush_queue();
 
-	NOTE("MatroskaAudioParser::FillQueue()");
+	NOTE("MatroskaParser::FillQueue()");
 
 	int UpperElementLevel = 0;
 	bool bAllowDummy = false;
@@ -2368,11 +2368,11 @@ int MatroskaAudioParser::FillQueue()
 		//_DELETE(ElementLevel1);
 		//delete ElementLevel1;
 	}
-	//NOTE1("MatroskaAudioParser::FillQueue() - Queue now has %u frames", m_Queue.size());
+	//NOTE1("MatroskaParser::FillQueue() - Queue now has %u frames", m_Queue.size());
 	return 0;
 };
 
-uint64 MatroskaAudioParser::GetClusterTimecode(uint64 filePos) {	
+uint64 MatroskaParser::GetClusterTimecode(uint64 filePos) {	
 	try {
 		uint64 ret = MAX_UINT64;
 
@@ -2439,7 +2439,7 @@ uint64 MatroskaAudioParser::GetClusterTimecode(uint64 filePos) {
 	}	
 };
 
-cluster_entry_ptr MatroskaAudioParser::FindCluster(uint64 timecode)
+cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 {
 	try {
 		#ifdef _DEBUG_NO_SEEKING
@@ -2533,10 +2533,10 @@ cluster_entry_ptr MatroskaAudioParser::FindCluster(uint64 timecode)
 		}
 
 		if (correctEntry != NULL)
-			NOTE3("MatroskaAudioParser::FindCluster(timecode = %u) seeking to cluster %i at %u", (uint32)(timecode / m_TimecodeScale), (uint32)correctEntry->clusterNo, (uint32)correctEntry->filePos);
+			NOTE3("MatroskaParser::FindCluster(timecode = %u) seeking to cluster %i at %u", (uint32)(timecode / m_TimecodeScale), (uint32)correctEntry->clusterNo, (uint32)correctEntry->filePos);
 		else
 		{
-			NOTE1("MatroskaAudioParser::FindCluster(timecode = %u) seeking failed", (uint32)(timecode / m_TimecodeScale));
+			NOTE1("MatroskaParser::FindCluster(timecode = %u) seeking failed", (uint32)(timecode / m_TimecodeScale));
 		}
 
 		return correctEntry;
@@ -2546,7 +2546,7 @@ cluster_entry_ptr MatroskaAudioParser::FindCluster(uint64 timecode)
 	}
 }
 
-void MatroskaAudioParser::CountClusters() 
+void MatroskaParser::CountClusters() 
 {
 	for (uint32 c = 0; c < m_ClusterIndex.size(); c++) {
 		cluster_entry_ptr clusterEntry = m_ClusterIndex.at(c);		
@@ -2554,7 +2554,7 @@ void MatroskaAudioParser::CountClusters()
 	}
 }
 
-void MatroskaAudioParser::FixChapterEndTimes()
+void MatroskaParser::FixChapterEndTimes()
 {
 	if (m_Chapters.size() > 0) {
 		MatroskaChapterInfo *nextChapter = &m_Chapters.at(m_Chapters.size()-1);
@@ -2575,7 +2575,7 @@ void MatroskaAudioParser::FixChapterEndTimes()
 	}	
 }
 
-bool MatroskaAudioParser::FindEditionUID(uint64 uid)
+bool MatroskaParser::FindEditionUID(uint64 uid)
 {
 	for (uint32 c = 0; c < m_Editions.size(); c++) {
 		MatroskaEditionInfo &currentEdition = m_Editions.at(c);	
@@ -2585,7 +2585,7 @@ bool MatroskaAudioParser::FindEditionUID(uint64 uid)
 	return false;
 }
 
-bool MatroskaAudioParser::FindChapterUID(uint64 uid)
+bool MatroskaParser::FindChapterUID(uint64 uid)
 {
 	for (uint32 c = 0; c < m_Chapters.size(); c++) {
 		MatroskaChapterInfo &currentChapter = m_Chapters.at(c);	
