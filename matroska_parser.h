@@ -258,40 +258,6 @@ public:
     const boost::optional< float > &getTrackPeak() const;
 };
 
-	//! Collects information about a file.
-class file_info {
-public:
-		//! Adds or overwrites technical info entry.
-	size_t info_set(const char *name, const char *value);
-
-	bool info_set_replaygain(const char *name, const char *value);
-
-		//! Gets number of metadata entries.
-	size_t meta_get_count() const;
-
-		//! Gets name of metadata entry i.
-	const char *meta_enum_name(size_t i) const;
-
-		//! Gets number of values in metadata entry i (always >= 1).
-	size_t meta_enum_value_count(size_t i) const;
-
-		//! Gets value j from metadata entry i.
-	const char *meta_enum_value(size_t i, size_t j) const;
-
-	const char *meta_get(const char *name, size_t i) const;
-
-		//! Adds or overwrites metadata entry for name.
-	size_t meta_set(const char *name, const char *value);
-
-	size_t meta_add(const char *name, const char *value);
-
-		//! Gets replay gain.
-	replaygain_info get_replaygain() const;
-
-		//! Sets replay gain.
-	void set_replaygain(const replaygain_info &info);
-};
-
 class MatroskaParser {
 public:
 	MatroskaParser(const char *filename, abort_callback & p_abort);
@@ -376,8 +342,6 @@ protected:
 	// \return true Yes, we already have this uid
 	// \return false Nope
 	bool FindChapterUID(uint64 uid);
-	/// Adds the info tags to the current file in memory 
-	void AddTags(file_info &info);
 	
 	MatroskaTagInfo *FindTagWithTrackUID(uint64 trackUID);
 	MatroskaTagInfo *FindTagWithEditionUID(uint64 editionUID, uint64 trackUID = 0);
