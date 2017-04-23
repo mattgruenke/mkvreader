@@ -16,7 +16,7 @@ void container_matroska_impl::open(const char * p_path, bool p_info_only, abort_
     try {
         matroska_parser_ptr parser = matroska_parser_ptr(new MatroskaParser(p_path, *m_abort));
         parser->Parse(p_info_only);
-        MatroskaParser::attachment_list &attachments = parser->GetAttachmentList();
+        MatroskaParser::attachment_list attachments = parser->GetAttachmentList();
         for (MatroskaParser::attachment_list::iterator item = attachments.begin(); item != attachments.end(); ++item) {
             matroska::attachment attachment(this, *m_abort, item->FileName.GetUTF8().c_str(), item->MimeType.c_str(), item->Description.GetUTF8().c_str(),
                 static_cast<size_t>(item->SourceDataLength), static_cast<size_t>(item->SourceStartPos));
