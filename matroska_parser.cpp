@@ -48,7 +48,15 @@ using namespace LIBEBML_NAMESPACE;
 using namespace LIBMATROSKA_NAMESPACE;
 
 
-#define LOG_ERROR_S( s )     (std::cerr << s << "\n")
+#define LOG_ERROR_S( s )     (std::cerr << s << std::endl)
+#define LOG_WARN_S(  s )     (std::cerr << s << std::endl)
+#define LOG_INFO_S(  s )     (std::cerr << s << std::endl)
+#define LOG_DEBUG_S( s )     {}
+
+#define LOG_ERROR( ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
+#define LOG_WARN(  ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
+#define LOG_INFO(  ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
+#define LOG_DEBUG( ... )   {}
 
 const size_t TextBuffer_Size = 16;
 
@@ -285,6 +293,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextElement(m_ElementLevel0->Generic().Context, UpperElementLevel, 0xFFFFFFFFFFFFFFFFL, true, 1));
 		while (ElementLevel1 != NullElement) {
 			if (UpperElementLevel > 0) {
+                LOG_DEBUG_S( "MatroskaParser::Parse(): UpperElementLevel = " << UpperElementLevel );
 				break;
 			}
 			if (UpperElementLevel < 0) {
@@ -363,6 +372,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 						}
 					}
 				}
+				else LOG_INFO_S( "MatroskaParser::Parse(): IsSeekable() returned false." );
 			}else if (EbmlId(*ElementLevel1) == KaxInfo::ClassInfos.GlobalId) {
 				// General info about this Matroska file
 				ElementLevel2 = ElementPtr(m_InputStream.FindNextElement(ElementLevel1->Generic().Context, UpperElementLevel, 0xFFFFFFFFFFFFFFFFL, bAllowDummy));
@@ -542,6 +552,14 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 					}
 				}
 			} else if (EbmlId(*ElementLevel1) == KaxCluster::ClassInfos.GlobalId) {
+#if 0
+                cluster_entry_ptr newCluster(new MatroskaMetaSeekClusterEntry());
+                newCluster->timecode = MAX_UINT64;
+                newCluster->filePos = ElementLevel1->GetElementPosition();
+                newCluster->clusterNo = m_ClusterIndex.size();
+                m_ClusterIndex.push_back(newCluster);
+                LOG_INFO_S( "MatroskaParser::Parse(): Got cluster @ " << (uint64) newCluster->filePos );
+#endif
 				if (bBreakAtClusters) {
 					m_IOCallback->setFilePointer(ElementLevel1->GetElementPosition());
 					//delete ElementLevel1;
@@ -953,6 +971,7 @@ void MatroskaParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly)
 	l2 = ElementPtr(m_InputStream.FindNextElement(metaSeekElement->Generic().Context, UpperElementLevel, 0xFFFFFFFFFFFFFFFFL, true, 1));
 	while (l2 != NullElement) {
 		if (UpperElementLevel > 0) {
+            LOG_DEBUG_S( "MatroskaParser::Parse_MetaSeek(): UpperElementLevel = " << UpperElementLevel );
 			break;
 		}
 		if (UpperElementLevel < 0) {
@@ -987,6 +1006,7 @@ void MatroskaParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly)
 					s = (uint16)seek_id.GetSize();
                     id.reset();
 					id = EbmlIdPtr(new EbmlId(b, s));
+                    LOG_INFO_S( "MatroskaParser::Parse_MetaSeek(): Found position for element" << EbmlIdPrinter( b, s ) );
 
 				} else if (EbmlId(*l3) == KaxSeekPosition::ClassInfos.GlobalId) {
 					KaxSeekPosition &seek_pos = static_cast<KaxSeekPosition &>(*l3);
@@ -1003,9 +1023,10 @@ void MatroskaParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly)
 						newCluster->timecode = MAX_UINT64;
 						newCluster->filePos = static_cast<KaxSegment *>(m_ElementLevel0.get())->GetGlobalPosition(lastSeekPos);
 						m_ClusterIndex.push_back(newCluster);
+                        LOG_INFO_S( "MatroskaParser::Parse_MetaSeek(): Got cluster @ " << (uint64) newCluster->filePos );
 
 					} else if (*id == KaxSeekHead::ClassInfos.GlobalId) {
-						NOTE1("Found MetaSeek Seek Entry Postion: %u", (unsigned long)lastSeekPos);
+						LOG_INFO_S("Found MetaSeek Seek Entry Postion: " << lastSeekPos);
 						uint64 orig_pos = m_IOCallback->getFilePointer();
 						m_IOCallback->setFilePointer(static_cast<KaxSegment *>(m_ElementLevel0.get())->GetGlobalPosition(lastSeekPos));
 						
@@ -1051,7 +1072,7 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 	EbmlElement *Element = NULL;
 	MatroskaChapterInfo newChapter;
 
-	NOTE("New chapter");
+	LOG_INFO_S("New chapter");
 
 	for (size_t i = 0; i < ChapterAtom->ListSize(); i++)
 	{	
@@ -1060,17 +1081,17 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 		if (IS_ELEMENT_ID(KaxChapterUID))
 		{
 			newChapter.chapterUID = uint64(*static_cast<EbmlUInteger *>(Element));
-			NOTE1("- UID : %I64d", newChapter.chapterUID);
+			LOG_INFO_S("- UID : " << newChapter.chapterUID);
 		}
 		else if(IS_ELEMENT_ID(KaxChapterTimeStart))
 		{							
 			newChapter.timeStart = uint64(*static_cast<EbmlUInteger *>(Element)); // it's in ns
-			NOTE1("- TimeStart : %I64d", newChapter.timeStart);
+			LOG_INFO_S("- TimeStart : " << newChapter.timeStart);
 		}
 		else if(IS_ELEMENT_ID(KaxChapterTimeEnd))
 		{
 			newChapter.timeEnd = uint64(*static_cast<EbmlUInteger *>(Element)); // it's in ns
-			NOTE1("- TimeEnd : %I64d", newChapter.timeEnd);
+			LOG_INFO_S("- TimeEnd : " << newChapter.timeEnd);
 		}
 		else if(IS_ELEMENT_ID(KaxChapterTrack))
 		{
@@ -1083,12 +1104,12 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 				{
 					uint64 chapTrackNo = uint64(*static_cast<EbmlUInteger *>(Element));
 					newChapter.tracks.push_back(chapTrackNo);
-					NOTE1("- TrackNumber : %I64d", chapTrackNo);
+					LOG_INFO_S("- TrackNumber : " << chapTrackNo);
 				}
 				else if(IS_ELEMENT_ID(KaxChapterAtom))
 				{									
 					// Ignore sub-chapter
-					NOTE("ignore sub-chapter");
+					LOG_INFO("ignore sub-chapter");
 					//Parse_Chapter_Atom((KaxChapterAtom *)Element);
 				}
 			}
@@ -1104,12 +1125,12 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 				if(IS_ELEMENT_ID(KaxChapterString))
 				{
 					newChapterDisplay.string = UTFstring(*static_cast <EbmlUnicodeString *>(Element)).c_str();
-					NOTE1("- String : %s", newChapterDisplay.string.GetUTF8().c_str());
+					LOG_INFO_S("- String : " << newChapterDisplay.string.GetUTF8());
 				}
 				else if(IS_ELEMENT_ID(KaxChapterAtom))
 				{									
 					// Ignore sub-chapter
-					NOTE("ignore sub-chapter");
+					LOG_INFO("ignore sub-chapter");
 					//Parse_Chapter_Atom((KaxChapterAtom *)Element);
 				}
 			}
@@ -1136,7 +1157,7 @@ void MatroskaParser::Parse_Chapters(KaxChapters *chaptersElement)
 	EbmlElement *Element = NULL;	
 	int UpperEltFound = 0;
 
-	NOTE("New edition");
+	LOG_INFO("New edition");
 
 	if (chaptersElement == NULL)
 		return;
@@ -1158,7 +1179,7 @@ void MatroskaParser::Parse_Chapters(KaxChapters *chaptersElement)
 				{
 					// A new edition :)
 					newEdition.editionUID = uint64(*static_cast<EbmlUInteger *>(Element));
-					NOTE1("- UID : %I64d", newEdition.editionUID);
+					LOG_INFO_S("- UID : " << newEdition.editionUID);
 				}
 				else if(IS_ELEMENT_ID(KaxChapterAtom))
 				{
@@ -1194,7 +1215,7 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 			MatroskaTagInfo newTag;
 			newTag.targetTypeValue = 50;
 			KaxTag *tagElement = (KaxTag*)Element;
-			NOTE("New Tag");
+			LOG_INFO("New Tag");
 			for (size_t j = 0; j < tagElement->ListSize(); j++)
 			{
 				Element = (*tagElement)[j];
@@ -1207,32 +1228,32 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 						if(IS_ELEMENT_ID(KaxTagTrackUID))
 						{
 							newTag.targetTrackUID = uint64(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetTrackUID : %I64d", newTag.targetTrackUID);
+							LOG_INFO_S("- TargetTrackUID : " << newTag.targetTrackUID);
 						}
 						else if(IS_ELEMENT_ID(KaxTagEditionUID))
 						{
 							newTag.targetEditionUID = uint64(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetEditionUID : %I64d", newTag.targetEditionUID);
+							LOG_INFO_S("- TargetEditionUID : " << newTag.targetEditionUID);
 						}
 						else if(IS_ELEMENT_ID(KaxTagChapterUID))
 						{
 							newTag.targetChapterUID = uint64(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetChapterUIDUID : %I64d", newTag.targetChapterUID);
+							LOG_INFO_S("- TargetChapterUIDUID : " << newTag.targetChapterUID);
 						}
 						else if(IS_ELEMENT_ID(KaxTagAttachmentUID))
 						{
 							newTag.targetAttachmentUID = uint64(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetAttachmentUID : %I64d", newTag.targetAttachmentUID);
+							LOG_INFO_S("- TargetAttachmentUID : " << newTag.targetAttachmentUID);
 						}
 						else if(IS_ELEMENT_ID(KaxTagTargetTypeValue))
 						{
 							newTag.targetTypeValue = uint32(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetTypeValue : %d", newTag.targetTypeValue);
+							LOG_INFO_S("- TargetTypeValue : " << newTag.targetTypeValue);
 						}
 						else if(IS_ELEMENT_ID(KaxTagTargetType))
 						{
 							newTag.targetType = std::string(*static_cast<KaxTagTargetType *>(Element));
-							NOTE1("- TargetType : %s", newTag.targetType.c_str());
+							LOG_INFO_S("- TargetType : " << newTag.targetType);
 						}
 					}
 				}
@@ -1240,7 +1261,7 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 				{
 					MatroskaSimpleTag newSimpleTag;
 					KaxTagSimple *tagSimpleElement = (KaxTagSimple*)Element;
-					NOTE("New SimpleTag");
+					LOG_INFO("New SimpleTag");
 					for (size_t k = 0; k < tagSimpleElement->ListSize(); k++)
 					{
 						Element = (*tagSimpleElement)[k];
@@ -1250,22 +1271,22 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 							std::string str_utf8 = str_utf.GetUTF8();
 							std::string str_upper = boost::algorithm::to_upper_copy(str_utf8);
 							newSimpleTag.name.SetUTF8(str_upper);
-							NOTE1("- Name : %s", newSimpleTag.name.GetUTF8().c_str());
+							LOG_INFO_S("- Name : " << newSimpleTag.name.GetUTF8());
 						}
 						else if(IS_ELEMENT_ID(KaxTagString))
 						{
 							newSimpleTag.value = UTFstring(*static_cast <EbmlUnicodeString *>(Element)).c_str();
-							NOTE1("- Value : %s", newSimpleTag.value.GetUTF8().c_str());
+							LOG_INFO_S("- Value : " << newSimpleTag.value.GetUTF8());
 						}
 						else if(IS_ELEMENT_ID(KaxTagDefault))
 						{
 							newSimpleTag.defaultFlag = uint32(*static_cast<EbmlUInteger *>(Element));
-							NOTE1("- TargetTypeValue : %d", newSimpleTag.default);
+							LOG_INFO_S("- TargetTypeValue : " << newSimpleTag.defaultFlag);
 						}
 						else if(IS_ELEMENT_ID(KaxTagLangue))
 						{
 							newSimpleTag.language = std::string(*static_cast <KaxTagLangue *>(Element));
-							NOTE1("- Language : %s", newSimpleTag.language.c_str());
+							LOG_INFO_S("- Language : " << newSimpleTag.language);
 						}
 						else if(IS_ELEMENT_ID(KaxTagSimple))
 						{
@@ -1282,18 +1303,10 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 	}
 };
 
-static void log_error( const boost::format &fmt )
-{
-}
-
-static void log_info( const std::string &str )
-{
-}
-
 
 int MatroskaParser::FillQueue() 
 {
-	NOTE("MatroskaParser::FillQueue()");
+	LOG_DEBUG("MatroskaParser::FillQueue()");
 
 	int UpperElementLevel = 0;
 	bool bAllowDummy = false;
@@ -1312,9 +1325,10 @@ int MatroskaParser::FillQueue()
 			LOG_ERROR_S( "MatroskaParser::FillQueue(): can't find cluster at current timecode: " << m_CurrentTimecode );
 			return 2;
 		}
+        else LOG_DEBUG_S( "MatroskaParser::FillQueue(): got cluster at timecode: " << m_CurrentTimecode );
 		int64 clusterFilePos = currentCluster->filePos;
 
-		//log_info(uStringPrintf("cluster %d", currentCluster->clusterNo));
+		LOG_DEBUG_S("cluster " << currentCluster->clusterNo);
 
 		m_IOCallback->setFilePointer(clusterFilePos);
 		// Find the element data
@@ -1472,7 +1486,6 @@ int MatroskaParser::FillQueue()
 
                         FrameQueue &track_queue = track->second;
 						track_queue.push_back( newFrame );
-
 						if (prevFrame != NULL && prevFrame->duration == 0) {
 							prevFrame->duration = newFrame->timecode - prevFrame->timecode;
 							//if (newFrame->duration == 0)
@@ -1489,7 +1502,7 @@ int MatroskaParser::FillQueue()
 
 						prevFrame = newFrame;
                     } else {
-                        log_info("newFrame ==!! delete!!\n");
+                        LOG_INFO("newFrame ==!! delete!!");
                         _DELETE(newFrame);
                     }
 				}
@@ -1523,8 +1536,9 @@ int MatroskaParser::FillQueue()
 			m_CurrentTimecode = m_ClusterIndex.at(currentCluster->clusterNo+1)->timecode;
 			if(m_CurrentTimecode == 0)
 			{
-				log_error(boost::format("clusterNo : %d, m_ClusterIndex.size() : %d") % currentCluster->clusterNo % (int) m_ClusterIndex.size());
-				log_info("m_CurrentTimecode == 0 (a)");
+				LOG_INFO_S( (boost::format("clusterNo : %d, m_ClusterIndex.size() : %d")
+					% currentCluster->clusterNo % (int) m_ClusterIndex.size()) );
+				LOG_INFO("m_CurrentTimecode == 0 (a)");
 			}
 		} else {
 			m_CurrentTimecode = MAX_UINT64;
@@ -1547,6 +1561,7 @@ int MatroskaParser::FillQueue()
 			ElementLevel2 = ElementPtr(m_InputStream.FindNextElement(ElementLevel1->Generic().Context, UpperElementLevel, ElementLevel1->ElementSize(), bAllowDummy));
 			while (ElementLevel2 != NullElement) {
 				if (UpperElementLevel > 0) {
+                    LOG_WARN_S( "MatroskaParser::FillQueue(): UpperElementLevel = " << UpperElementLevel << " at line " << __LINE__ );
 					break;
 				}
 				if (UpperElementLevel < 0) {
@@ -1567,6 +1582,7 @@ int MatroskaParser::FillQueue()
 					ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, ElementLevel2->ElementSize(), bAllowDummy));
 					while (ElementLevel3 != NullElement) {
 						if (UpperElementLevel > 0) {
+                            LOG_DEBUG_S( "MatroskaParser::FillQueue(): UpperElementLevel = " << UpperElementLevel << " at line " << __LINE__ );
 							break;
 						}
 						if (UpperElementLevel < 0) {
@@ -1583,6 +1599,7 @@ int MatroskaParser::FillQueue()
                             {
 								trackIdx = FindTrack( trackNum );
 								MatroskaTrackInfo &track = m_Tracks[trackIdx];
+
 								newFrame->timecode = DataBlock.GlobalTimecode();							
 
 								if (DataBlock.NumberFrames() > 1) {	
@@ -1625,7 +1642,10 @@ int MatroskaParser::FillQueue()
 							//_DELETE(ElementLevel3);
 							ElementLevel3 = ElementLevel4;
 							if (UpperElementLevel > 0)
+                            {
+                                LOG_WARN_S( "MatroskaParser::FillQueue(): UpperElementLevel = " << UpperElementLevel << " at line " << __LINE__ );
 								break;
+                            }
 						} else {
 							ElementLevel3->SkipData(m_InputStream, ElementLevel3->Generic().Context);
 							//delete ElementLevel3;
@@ -1653,7 +1673,10 @@ int MatroskaParser::FillQueue()
 					//_DELETE(ElementLevel2);
 					ElementLevel2 = ElementLevel3;
 					if (UpperElementLevel > 0)
+                    {
+                        LOG_DEBUG_S( "MatroskaParser::FillQueue(): UpperElementLevel = " << UpperElementLevel << " at line " << __LINE__ );
 						break;
+                    }
 				} else {
 					ElementLevel2->SkipData(m_InputStream, ElementLevel2->Generic().Context);
 					//if (ElementLevel2 != pChecksum)
@@ -1671,7 +1694,10 @@ int MatroskaParser::FillQueue()
 		//_DELETE(ElementLevel1);
 		//delete ElementLevel1;
 	}
-	//NOTE1("MatroskaParser::FillQueue() - Queue now has %u frames", m_Queue.size());
+    for (FrameQueueMap::iterator track = m_FrameQueues.begin(); track != m_FrameQueues.end(); ++track)
+    {
+        LOG_INFO_S("MatroskaParser::FillQueue() - trackIdx " << track->first << " now has " << track->second.size() << " frames queued");
+    }
 	return 0;
 };
 
@@ -1754,6 +1780,8 @@ cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 			return &m_ClusterIndex[callCount++];
 		else return NULL;
 		#endif
+
+        assert( !m_ClusterIndex.empty() );
 
 		if (timecode == 0)
 			// Special case
@@ -1839,10 +1867,13 @@ cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 		}
 
 		if (correctEntry != NULL)
-			NOTE3("MatroskaParser::FindCluster(timecode = %u) seeking to cluster %i at %u", (uint32)(timecode / m_TimecodeScale), (uint32)correctEntry->clusterNo, (uint32)correctEntry->filePos);
+        {
+			LOG_INFO("MatroskaParser::FindCluster(timecode = %u) seeking to cluster %i at %u",
+                (uint32)(timecode / m_TimecodeScale), (uint32) correctEntry->clusterNo, (uint32) correctEntry->filePos);
+        }
 		else
 		{
-			NOTE1("MatroskaParser::FindCluster(timecode = %u) seeking failed", (uint32)(timecode / m_TimecodeScale));
+			LOG_INFO("MatroskaParser::FindCluster(timecode = %u) seeking failed", (uint32)(timecode / m_TimecodeScale));
 		}
 
 		return correctEntry;
@@ -1908,16 +1939,17 @@ bool MatroskaParser::FindChapterUID(uint64 uid)
 
 void PrintChapters(std::vector<MatroskaChapterInfo> &theChapters) 
 {
+    LOG_INFO_S( "Got " << theChapters.size() << " chapters" );
 	for (uint32 c = 0; c < theChapters.size(); c++) {
 		MatroskaChapterInfo &currentChapter = theChapters.at(c);	
-		NOTE2("Chapter %u, UID: %u", c, (uint32)currentChapter.chapterUID);
-		NOTE1("\tStart Time: %u", (uint32)currentChapter.timeStart);
-		NOTE1("\tEnd Time: %u", (uint32)currentChapter.timeEnd);
+		LOG_INFO("Chapter %u, UID: %u", c, (uint32)currentChapter.chapterUID);
+		LOG_INFO("\tStart Time: %u", (uint32)currentChapter.timeStart);
+		LOG_INFO("\tEnd Time: %u", (uint32)currentChapter.timeEnd);
 		for (uint32 d = 0; d < currentChapter.display.size(); d++) {
-			NOTE3("\tDisplay %u, String: %s Lang: %s", d, currentChapter.display.at(d).string.GetUTF8().c_str(), currentChapter.display.at(d).lang.c_str());
+			LOG_INFO("\tDisplay %u, String: %s Lang: %s", d, currentChapter.display.at(d).string.GetUTF8().c_str(), currentChapter.display.at(d).lang.c_str());
 		}
 		for (uint32 t = 0; t < currentChapter.tracks.size(); t++) {
-			NOTE2("\tTrack %u, UID: %%u", t, (uint32)currentChapter.tracks.at(t));
+			LOG_INFO("\tTrack %u, UID: %%u", t, (uint32)currentChapter.tracks.at(t));
 		}
 
 	}
