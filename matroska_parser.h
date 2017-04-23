@@ -36,7 +36,6 @@
 #define MULTITRACK 1
 
 #include "DbgOut.h"
-#include <queue>
 #include <map>
 #include <set>
 #include <list>
@@ -325,7 +324,8 @@ public:
 
 	UTFstring GetSegmentFileName() { return m_SegmentFilename; }
     typedef std::list<MatroskaAttachment> attachment_list;
-	attachment_list &GetAttachmentList() { return m_AttachmentList; }
+	const attachment_list &GetAttachmentList() const;
+    ByteArray ReadAttachment( attachment_list::const_iterator attachment );
 
 protected:
 	void Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly);

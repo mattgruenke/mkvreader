@@ -886,6 +886,30 @@ MatroskaAudioFrame *MatroskaParser::ReadFirstFrame( uint16 trackIdx )
     return ReadSingleFrame( trackIdx );
 };
 
+const MatroskaParser::attachment_list &MatroskaParser::GetAttachmentList() const
+{
+    return m_AttachmentList;
+}
+
+
+ByteArray MatroskaParser::ReadAttachment( attachment_list::const_iterator attachment )
+{
+    ByteArray result( attachment->SourceDataLength );
+
+    uint64 oldpos = m_IOCallback->getFilePointer();
+    m_IOCallback->setFilePointer( attachment->SourceStartPos );
+
+    uint32 num_read = m_IOCallback->read( &result.front(), attachment->SourceDataLength );
+    if (num_read != attachment->SourceDataLength) throw std::runtime_error(
+        boost::str( boost::format( "MatroskaParser::ReadAttachment() got %d bytes instead of %d" )
+            % num_read % attachment->SourceDataLength ) );
+
+    m_IOCallback->setFilePointer( oldpos );
+
+    return result;
+}
+
+
 typedef boost::shared_ptr<EbmlId> EbmlIdPtr;
 
 struct EbmlIdPrinter
