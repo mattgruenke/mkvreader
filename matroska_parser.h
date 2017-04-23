@@ -40,8 +40,6 @@
 #include <set>
 #include <list>
 #include <cstring>
-#include <fstream>
-#include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
@@ -249,15 +247,6 @@ class MatroskaTrackInfo {
 
 typedef boost::shared_ptr<MatroskaMetaSeekClusterEntry> cluster_entry_ptr;
 
-class replaygain_info
-{
-public:
-    const boost::optional< float > &getAlbumGain() const;
-    const boost::optional< float > &getTrackGain() const;
-
-    const boost::optional< float > &getAlbumPeak() const;
-    const boost::optional< float > &getTrackPeak() const;
-};
 
 class MatroskaParser {
 public:
