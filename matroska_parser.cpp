@@ -730,42 +730,45 @@ double MatroskaParser::GetDuration() {
 	}
 };
 
-int32 MatroskaParser::GetFirstAudioTrack()
+int32 MatroskaParser::GetFirstTrack( track_type type ) const
 {
-	for (uint16 t = 0; t < m_Tracks.size(); t++)
-	{
-		MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
-		if (!strncmp(currentTrack.codecID.c_str(),"A_",2)) return t;
-	}
-	return -1;
+    for (uint16 t = 0; t < m_Tracks.size(); t++)
+    {
+        const MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
+        if (currentTrack.trackType == type) return t;
+    }
+    return -1;
 }
 
-uint32 MatroskaParser::GetAudioTrackCount()
+uint32 MatroskaParser::GetTrackCount() const
 {
-	uint32 count = 0;
-	for (uint16 t = 0; t < m_Tracks.size(); t++)
-	{
-		MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
-		if (!strncmp(currentTrack.codecID.c_str(),"A_",2))
-			count++;
-	}
-	return count;
+    return m_Tracks.size();
 }
 
-uint32 MatroskaParser::GetAudioTrackIndex(uint32 index)
+uint32 MatroskaParser::GetTrackCount( track_type type ) const
 {
-	uint32 idx = 0;
-	for (uint16 t = 0; t < m_Tracks.size(); t++)
-	{
-		MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
-		if (!strncmp(currentTrack.codecID.c_str(),"A_",2))
-		{
-			if(t == index)
-				break;
-			idx++;
-		}
-	}
-	return idx;
+    uint32 count = 0;
+    for (uint16 t = 0; t < m_Tracks.size(); t++)
+    {
+        const MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
+        if (currentTrack.trackType == type) count++;
+    }
+    return count;
+}
+
+int32 MatroskaParser::GetTrackIndex(track_type type, uint32 index) const
+{
+    uint32 idx = 0;
+    for (uint16 t = 0; t < m_Tracks.size(); t++)
+    {
+        const MatroskaTrackInfo &currentTrack = m_Tracks.at(t);
+        if (currentTrack.trackType == type)
+        {
+            if(idx == index) return t;
+            else idx++;
+        }
+    }
+    return -1;
 }
 
 /*

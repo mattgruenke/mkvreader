@@ -227,6 +227,7 @@ class MatroskaTrackInfo {
 		//~MatroskaTrackInfo();
 
 
+		track_type trackType;
 		uint16 trackNumber;
 		uint64 trackUID;		
 		std::string codecID;
@@ -308,7 +309,7 @@ public:
 	double GetDuration();
 
 	/// Returns the track index of the first decodable track
-	int32 GetFirstAudioTrack();
+	int32 GetFirstTrack( track_type type ) const;
 
 	double TimecodeToSeconds(uint64 code,unsigned samplerate_hint = 44100);
 	uint64 SecondsToTimecode(double seconds);
@@ -324,8 +325,11 @@ public:
 	std::vector<MatroskaEditionInfo> &GetEditions() { return m_Editions; };
 	std::vector<MatroskaChapterInfo> &GetChapters() { return m_Chapters; };
 	std::vector<MatroskaTrackInfo> &GetTracks() { return m_Tracks; };
-	uint32 GetAudioTrackCount();
-	uint32 GetAudioTrackIndex(uint32 index);
+	uint32 GetTrackCount() const;
+	/// Returns the number of tracks of a given type.
+	uint32 GetTrackCount( track_type type ) const;
+	/// Returns the absolute index for the Nth track of a specified type.
+	int32 GetTrackIndex( track_type type, uint32 index) const;
 
 	int32 GetAvgBitrate();
 
