@@ -648,9 +648,10 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 		//_DELETE(ElementLevel2);
 		//_DELETE(ElementLevel1);
 	} catch (std::exception &e) {
-		LOG_ERROR_S( "MatroskaParser::Parse() got exception: " << e.what() );
+        LOG_ERROR_S( "MatroskaParser::Parse() got exception (" << typeid( e ).name() << "): " << e.what() );
 		return 1;
 	} catch (...) {
+        LOG_ERROR_S( "MatroskaParser::Parse() got unknown exception." );
 		return 1;
 	}
 
@@ -1736,9 +1737,12 @@ uint64 MatroskaParser::GetClusterTimecode(uint64 filePos) {
 		//delete ElementLevel1;
 
 		return ret;
+	} catch (std::exception &e) {
+        LOG_ERROR_S( "Caught exception (" << typeid( e ).name() << "): " << e.what() );
 	} catch (...) {
-		return MAX_UINT64;
+        LOG_ERROR_S( "Caught unknown exception." );
 	}	
+	return MAX_UINT64;
 };
 
 cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
