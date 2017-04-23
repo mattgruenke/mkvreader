@@ -768,129 +768,7 @@ uint32 MatroskaParser::GetAudioTrackIndex(uint32 index)
 	return idx;
 }
 
-static bool IsTagNamed(const MatroskaSimpleTag &currentSimpleTag, const char * name)
-{
-	return !strcasecmp(currentSimpleTag.name.GetUTF8().c_str(), name);
-}
-
-static bool AreTagsValueEqual(const MatroskaSimpleTag &tag1, const MatroskaSimpleTag &tag2)
-{
-	return !strcmp(tag1.value.GetUTF8().c_str(), tag2.value.GetUTF8().c_str());
-}
-
-const MatroskaSimpleTag* GetTagWithName(MatroskaTagInfo *SimpleTags, const char * name)
-{
-	if(SimpleTags == NULL)
-		return NULL;
-
-	for (size_t s = 0; s < SimpleTags->tags.size(); s++)
-	{
-		const MatroskaSimpleTag &currentSimpleTag = SimpleTags->tags.at(s);		
-		if(IsTagNamed(currentSimpleTag, name))
-			return &currentSimpleTag;
-	}
-	return NULL;
-}
-
-bool TagExistsAtEditionLevel(MatroskaTagInfo *TrackTags, const char * name)
-{
-	if(TrackTags == NULL)
-		return false;
-
-	for (size_t s = 0; s < TrackTags->tags.size(); s++)
-	{
-		const MatroskaSimpleTag &currentSimpleTag = TrackTags->tags.at(s);		
-		if(IsTagNamed(currentSimpleTag,name))
-			return true;
-	}
-	return false;
-}
-
-bool TagExistsAtChapterLevel(MatroskaTagInfo *ChapterTags, const char * name)
-{
-	if(ChapterTags == NULL)
-		return false;
-
-	for (size_t s = 0; s < ChapterTags->tags.size(); s++)
-	{
-		const MatroskaSimpleTag &currentSimpleTag = ChapterTags->tags.at(s);		
-		if(IsTagNamed(currentSimpleTag,name))
-			return true;
-	}
-	return false;
-}
-
-bool MatroskaParser::AreTagsIdenticalAtAllLevels(const char * name)
-{
-	const MatroskaSimpleTag* ReferenceTag = NULL;
-	bool AtLeastOneChapter = false;
-
-	for (size_t i = 0; i < m_Tags.size(); i++)
-	{
-		MatroskaTagInfo &currentTags = m_Tags.at(i);
-		if(ReferenceTag == NULL)
-		{
-			AtLeastOneChapter = true;
-			ReferenceTag = GetTagWithName(&currentTags, name);
-		} else {
-			const MatroskaSimpleTag* TagToCheck = GetTagWithName(&currentTags, name);
-			if(TagToCheck && !AreTagsValueEqual(*ReferenceTag,*TagToCheck))
-				return false;				
-		}
-	}
-	return AtLeastOneChapter;
-}
-
-bool MatroskaParser::AreTagsIdenticalAtEditionLevel(const char * name)
-{
-	const MatroskaSimpleTag* ReferenceTag = NULL;
-	bool AtLeastOneChapter = false;
-
-	for (size_t i = 0; i < m_Tags.size(); i++)
-	{
-		MatroskaTagInfo &currentTags = m_Tags.at(i);
-		if (currentTags.targetChapterUID == 0)
-		{
-			// Chapter tags
-			if(ReferenceTag == NULL)
-			{
-				AtLeastOneChapter = true;
-				ReferenceTag = GetTagWithName(&currentTags, name);
-			} else {
-				const MatroskaSimpleTag* TagToCheck = GetTagWithName(&currentTags, name);
-				if(TagToCheck && !AreTagsValueEqual(*ReferenceTag,*TagToCheck))
-					return false;				
-			}
-		}
-	}
-	return AtLeastOneChapter;
-}
-
-bool MatroskaParser::AreTagsIdenticalAtChapterLevel(const char * name)
-{
-	const MatroskaSimpleTag* ReferenceTag = NULL;
-	bool AtLeastOneChapter = false;
-
-	for (size_t i = 0; i < m_Tags.size(); i++)
-	{
-		MatroskaTagInfo &currentTags = m_Tags.at(i);
-		if (currentTags.targetChapterUID != 0)
-		{
-			// Chapter tags
-			if(ReferenceTag == NULL)
-			{
-				AtLeastOneChapter = true;
-				ReferenceTag = GetTagWithName(&currentTags, name);
-			} else {
-				const MatroskaSimpleTag* TagToCheck = GetTagWithName(&currentTags, name);
-				if(TagToCheck && !AreTagsValueEqual(*ReferenceTag,*TagToCheck))
-					return false;				
-			}
-		}
-	}
-	return AtLeastOneChapter;
-}
-
+/*
 static uint64_t time_to_samples(double time, uint32_t sample_rate) {
 	return (uint64_t) floor(sample_rate * time + 0.5);
 }
@@ -904,6 +782,7 @@ static std::string cuesheet_format_index_time(double time) {
 	seconds %= 60;
 	return boost::str( boost::format( "%02d:%02d:%02d" ) % minutes % seconds % ticks );
 }
+*/
 
 
 void MatroskaParser::SetCurrentTrack(uint32 newTrackNo)
