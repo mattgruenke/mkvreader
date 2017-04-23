@@ -79,12 +79,12 @@ double MatroskaParser::TimecodeToSeconds(uint64 code, unsigned /*samplerate_hint
 };
 
 
-MatroskaAudioFrame::MatroskaAudioFrame() 
+MatroskaFrame::MatroskaFrame() 
+: timecode( 0 ),
+  duration( 0 ),
+  add_id( 0 )
 {
-	timecode = 0;
-	duration = 0;
-    add_id = 0;
-};
+}
 
 MatroskaAttachment::MatroskaAttachment()
 {
@@ -96,7 +96,7 @@ MatroskaAttachment::MatroskaAttachment()
 	SourceDataLength = 0;
 };
 
-void MatroskaAudioFrame::Reset()
+void MatroskaFrame::Reset()
 {
 	timecode = 0;
 	duration = 0;
@@ -860,7 +860,7 @@ bool MatroskaParser::Seek(double seconds, unsigned samplerate_hint)
 	return FillQueue() == 0;
 };
 
-MatroskaAudioFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
+MatroskaFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
 {
     FrameQueueMap::iterator track = m_FrameQueues.find( trackIdx );
     if (track == m_FrameQueues.end()) return NULL;
@@ -877,7 +877,7 @@ MatroskaAudioFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
 };
 
     // TO_DO: this feels like a hack.  Do we really need this function?
-MatroskaAudioFrame *MatroskaParser::ReadFirstFrame( uint16 trackIdx )
+MatroskaFrame *MatroskaParser::ReadFirstFrame( uint16 trackIdx )
 {
     m_CurrentTimecode = 0;
     return ReadSingleFrame( trackIdx );
@@ -1320,7 +1320,7 @@ int MatroskaParser::FillQueue()
 		if (EbmlId(*ElementLevel1) == KaxCluster::ClassInfos.GlobalId) {
 			KaxCluster *SegmentCluster = static_cast<KaxCluster *>(ElementLevel1.get());
 			uint32 ClusterTimecode = 0;
-			MatroskaAudioFrame *prevFrame = NULL;
+			MatroskaFrame *prevFrame = NULL;
 
 			// read blocks and discard the ones we don't care about
 			ElementLevel2 = ElementPtr(m_InputStream.FindNextElement(ElementLevel1->Generic().Context, UpperElementLevel, ElementLevel1->ElementSize(), bAllowDummy));
@@ -1341,7 +1341,7 @@ int MatroskaParser::FillQueue()
 					//KaxBlockGroup & aBlockGroup = *static_cast<KaxBlockGroup*>(ElementLevel2);
 
 					// Create a new frame
-					MatroskaAudioFrame *newFrame = new MatroskaAudioFrame;
+					MatroskaFrame *newFrame = new MatroskaFrame();
                     uint16 trackIdx = 0xffff;   // track of frame.
 
 					ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, ElementLevel2->ElementSize(), bAllowDummy));
@@ -1554,7 +1554,7 @@ int MatroskaParser::FillQueue()
 					//KaxBlockGroup & aBlockGroup = *static_cast<KaxBlockGroup*>(ElementLevel2);
 
 					// Create a new frame
-					MatroskaAudioFrame *newFrame = new MatroskaAudioFrame;				
+					MatroskaFrame *newFrame = new MatroskaFrame();
                     uint16 trackIdx = 0xffff;   // track of frame.
 
 					ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, ElementLevel2->ElementSize(), bAllowDummy));

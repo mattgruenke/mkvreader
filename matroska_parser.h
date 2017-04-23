@@ -128,11 +128,12 @@ public:
 	uint64 SourceDataLength;
 };
 
-class MatroskaAudioFrame {
+class MatroskaFrame {
 public:
-	MatroskaAudioFrame();
+	MatroskaFrame();
 	void Reset();
-    double get_duration() {
+    double get_duration() const
+    {
         return static_cast<double>(duration) / 1000000000.0;
     }
 
@@ -302,13 +303,13 @@ public:
 	bool Seek(double seconds, unsigned samplerate_hint);
 
 	/// Seek to a position
-	/// \param frame The MatroskaAudioFrame struct to store the frame	
+	/// \param frame The MatroskaFrame struct to store the frame	
 	/// \return 0 If read ok	
 	/// \return 1 If file could not be read or it not open	
 	/// \return 2 End of track (EOT)
 
-	MatroskaAudioFrame * ReadSingleFrame( uint16 trackIdx);
-    MatroskaAudioFrame * ReadFirstFrame( uint16 trackIdx );
+	MatroskaFrame * ReadSingleFrame( uint16 trackIdx);
+    MatroskaFrame * ReadFirstFrame( uint16 trackIdx );
 
 	UTFstring GetSegmentFileName() { return m_SegmentFilename; }
     typedef std::list<MatroskaAttachment> attachment_list;
@@ -356,7 +357,7 @@ protected:
 	std::vector<MatroskaTagInfo> m_Tags;
 	
 	/// This is the queue of buffered frames to deliver
-    typedef boost::ptr_deque< MatroskaAudioFrame > FrameQueue;
+    typedef boost::ptr_deque< MatroskaFrame > FrameQueue;
     typedef std::map<uint32, FrameQueue> FrameQueueMap;
 	FrameQueueMap m_FrameQueues;
 
