@@ -301,15 +301,6 @@ public:
 	/// \return 1 Failed
 	int Parse(bool bInfoOnly = false, bool bBreakAtClusters = true);
 
-	/// Writes the tags to the current matroska file
-	/// \param info All the tags we need to write
-	/// \return 0 Tags written A OK
-	/// \return 1 Failed to write tags
-//	int WriteTags();
-
-	/// Set the info tags to the current tags file in memory
-//	void SetTags(const file_info &info);
-
 	MatroskaTrackInfo &GetTrack(uint16 trackNo) { return m_Tracks.at(trackNo); };
 	uint64 GetTimecodeScale() { return m_TimecodeScale; };
 
@@ -321,13 +312,6 @@ public:
 
 	double TimecodeToSeconds(uint64 code,unsigned samplerate_hint = 44100);
 	uint64 SecondsToTimecode(double seconds);
-
-	/// Set the fb2k info from the matroska file
-	/// \param info This will be filled up with tags ;)
-//	bool SetFB2KInfo(file_info &info, uint32_t p_subsong);
-
-	/// Get the foobar2000 style format string
-//	const char *GetFoobar2000Format(uint16 trackNo, bool bSetupCodecPrivate = true);
 
 	/// Set the current track to read data from
 	void SetCurrentTrack(uint32 newTrackNo);
@@ -394,14 +378,6 @@ protected:
 	MatroskaTagInfo *FindTagWithTrackUID(uint64 trackUID);
 	MatroskaTagInfo *FindTagWithEditionUID(uint64 editionUID, uint64 trackUID = 0);
 	MatroskaTagInfo *FindTagWithChapterUID(uint64 chapterUID, uint64 trackUID = 0);
-	bool AreTagsIdenticalAtAllLevels(const char * name);
-	bool AreTagsIdenticalAtEditionLevel(const char * name);
-	bool AreTagsIdenticalAtChapterLevel(const char * name);
-//	void MarkHiddenTags();
-
-//	void SetAlbumTags(file_info &info, MatroskaTagInfo* AlbumTags, MatroskaTagInfo* TrackTags);
-//	void SetTrackTags(file_info &info, MatroskaTagInfo* TrackTags);
-		
 
         std::string m_filename;
 	boost::scoped_ptr<IOCallback> m_IOCallback;
