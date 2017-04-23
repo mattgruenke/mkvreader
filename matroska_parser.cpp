@@ -914,6 +914,30 @@ MatroskaAudioFrame * MatroskaParser::ReadFirstFrame()
 
 typedef boost::shared_ptr<EbmlId> EbmlIdPtr;
 
+struct EbmlIdPrinter
+{
+    const binary *bytes;
+    const uint16 len;
+
+    EbmlIdPrinter( const binary *bytes, uint16 len )
+    : bytes( bytes ), len( len )
+    {
+    }
+};
+
+std::ostream &operator<<( std::ostream &os, const EbmlIdPrinter &idp )
+{
+    const char *sep = "";
+    os << "[";
+    for (uint16 i = 0; i < idp.len; i++)
+    {
+        os << sep << std::hex << (int) idp.bytes[i];
+        sep = " ";
+    }
+    os << "]";
+    return os;
+}
+
 void MatroskaParser::Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly) 
 {
 //    TIMER;
