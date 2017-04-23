@@ -35,6 +35,7 @@
 #include <iostream>
 #include <cmath>
 #include <string>
+#include <typeinfo>
 #include <algorithm>
 
 #include <boost/format.hpp>
@@ -74,7 +75,11 @@ bool starts_with(const string &s, const char *start) {
 
 static bool IsSeekable(const IOCallback &cb)
 {
+#if 0
     return true;    // since we're using StdIOCallback, it's always seekable.
+#else
+    return false;   // except seekable mode seems (more) broken...
+#endif
 }
 
 uint64 MatroskaParser::SecondsToTimecode(double seconds)
@@ -192,6 +197,7 @@ MatroskaEditionInfo::MatroskaEditionInfo() {
 }
 
 MatroskaTrackInfo::MatroskaTrackInfo() {
+	trackType = (track_type) 0;
 	trackNumber = 0;
 	trackUID = 0;		
 	duration = 0;
@@ -232,13 +238,6 @@ MatroskaParser::~MatroskaParser() {
 	//if (m_ElementLevel0 != NULL)
 	//	_DELETE(m_ElementLevel0);
 		//delete m_ElementLevel0;
-	
-	while (!m_Queue.empty()) {
-		MatroskaAudioFrame *currentPacket = m_Queue.front();
-		//delete currentPacket;
-		_DELETE(currentPacket);
-		m_Queue.pop();
-	}
 };
 
 int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters) 
@@ -459,10 +458,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackType::ClassInfos.GlobalId) {
 								KaxTrackType &TrackType = *static_cast<KaxTrackType*>(TrackEntry[Index1]);
-								if (uint8(TrackType) != track_audio) {
-									newTrack.trackNumber = 0xFFFF;
-									break;
-								}
+								newTrack.trackType = (track_type) (uint8) TrackType;    // TO_DO: check that this is a supported track type.
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackTimecodeScale::ClassInfos.GlobalId) {
 								KaxTrackTimecodeScale &TrackTimecodeScale = *static_cast<KaxTrackTimecodeScale*>(TrackEntry[Index1]);
@@ -719,15 +715,18 @@ MatroskaTagInfo *MatroskaParser::FindTagWithChapterUID(uint64 chapterUID, uint64
 	return foundTag;
 };
 
-double MatroskaParser::GetDuration() { 
+double MatroskaParser::GetDuration()
+{ 
 	if (m_CurrentChapter != NULL) {
 		return TimecodeToSeconds(m_CurrentChapter->timeEnd - m_CurrentChapter->timeStart);
-	};
-	return m_Duration / 1000000000.0;
-	if (m_Tracks.size() != 0) {
-		return m_Tracks.at(m_CurrentTrackNo).defaultDuration * (int64)m_TimecodeScale;
 	}
-};
+	return m_Duration / 1000000000.0;
+}
+
+double MatroskaParser::GetTrackDuration( uint32 trackIdx ) const
+{
+    return m_Tracks.at(trackIdx).defaultDuration * (int64)m_TimecodeScale;
+}
 
 int32 MatroskaParser::GetFirstTrack( track_type type ) const
 {
@@ -787,13 +786,29 @@ static std::string cuesheet_format_index_time(double time) {
 */
 
 
-void MatroskaParser::SetCurrentTrack(uint32 newTrackNo)
+void MatroskaParser::EnableTrack(uint32 newTrackIdx)
 {
-	m_CurrentTrackNo = newTrackNo;
-	// Clear the current queue (we are changing tracks)
-	while (!m_Queue.empty())
-		m_Queue.pop();
-};
+	m_CurrentTrackNo = newTrackIdx;
+    m_EnabledTrackNumbers.insert( m_Tracks.at(newTrackIdx).trackNumber );
+    m_FrameQueues.insert( std::pair< uint32, FrameQueue >( newTrackIdx, FrameQueue() ) );
+}
+
+
+bool MatroskaParser::TrackNumIsEnabled( uint16 trackNum ) const
+{
+    return m_EnabledTrackNumbers.find( trackNum ) != m_EnabledTrackNumbers.end();
+}
+
+
+uint16 MatroskaParser::FindTrack( uint16 trackNum ) const
+{
+    for (size_t i = 0; i != m_Tracks.size(); i++)
+    {
+        if (m_Tracks[i].trackNumber == trackNum) return (uint16) i;
+    }
+    return 0xffff;  // we shouldn't get here, since any access to this function should be guarded by other checks.
+}
+
 
 void MatroskaParser::SetSubSong(int subsong)
 {
@@ -813,63 +828,26 @@ int32 MatroskaParser::GetAvgBitrate()
 	return static_cast<int32>(ret);
 };
 
-bool MatroskaParser::skip_frames_until(double destination,unsigned & frames,double & last_timecode_delta,unsigned hint_samplerate)
+bool MatroskaParser::skip_frames_until(double destination, unsigned hint_samplerate)
 {
-	unsigned done = 0;
-	unsigned last_laced = 0;
+    bool have_data = false;
+    while (!have_data)
+    {
+        for(FrameQueueMap::iterator track = m_FrameQueues.begin(); track != m_FrameQueues.end(); ++track)
+        {
+            FrameQueue &track_queue = track->second;
+            while (!track_queue.empty() && TimecodeToSeconds( track_queue.front().timecode, hint_samplerate ) < destination) track_queue.pop_front();
 
-	double last_time;
-	{
-		uint64 last_timecode = get_current_frame_timecode();
-		if (last_timecode == (uint64)(-1)) return false;
-		last_time = TimecodeToSeconds(last_timecode,hint_samplerate);
-	}
+            if (!track_queue.empty()) have_data = true;
+        }
 
-	for(;;)
-	{
-		while (!m_Queue.empty()) {
-			MatroskaAudioFrame *currentPacket = m_Queue.front();
-			double packet_time = TimecodeToSeconds(currentPacket->timecode,hint_samplerate);
-			if (packet_time > destination)
-			{
-				if (done==0) return false;
-				last_timecode_delta = destination - last_time;
-				frames = done - last_laced;
-				return true;
-			}
-			last_time = packet_time;
-			done += (last_laced = currentPacket->dataBuffer.size());
-			//delete currentPacket;
-			_DELETE(currentPacket);
-			m_Queue.pop();
-		}
-		if (FillQueue()!=0)
-			return false;
-	}
+        if (!have_data && (FillQueue() != 0)) return false;
+    }
+
+    return true;
 }
 
-
-void MatroskaParser::flush_queue()
-{
-	while (!m_Queue.empty()) {
-		MatroskaAudioFrame *currentPacket = m_Queue.front();
-		//delete currentPacket;
-		_DELETE(currentPacket);
-		m_Queue.pop();
-	}
-}
-
-uint64 MatroskaParser::get_current_frame_timecode()
-{
-	if (m_Queue.empty())
-	{
-		if (FillQueue()!=0) return -1;
-		if (m_Queue.empty()) return -1;
-	}
-	return m_Queue.front()->timecode;
-}
-
-bool MatroskaParser::Seek(double seconds,unsigned & frames_to_skip,double & time_to_skip,unsigned samplerate_hint)
+bool MatroskaParser::Seek(double seconds, unsigned samplerate_hint)
 {
 	if (m_CurrentChapter != NULL) {
 		seconds += (double)(int64)m_CurrentChapter->timeStart / 1000000000; // ns -> seconds
@@ -877,35 +855,35 @@ bool MatroskaParser::Seek(double seconds,unsigned & frames_to_skip,double & time
 
 	uint64 seekToTimecode = SecondsToTimecode(seconds);
 	
-	flush_queue();
 	m_CurrentTimecode = seekToTimecode;
 
-	if (!skip_frames_until(seconds,frames_to_skip,time_to_skip,samplerate_hint)) return false;
+	if (!skip_frames_until(seconds, samplerate_hint)) return false;
 
-	flush_queue();
 	m_CurrentTimecode = seekToTimecode;
 	return FillQueue() == 0;
 };
 
-MatroskaAudioFrame * MatroskaParser::ReadSingleFrame()
+MatroskaAudioFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
 {
-	for(;;)
-	{
-		if (!m_Queue.empty()) {
-			MatroskaAudioFrame *newFrame = m_Queue.front();		
-			m_Queue.pop();
-			return newFrame;
-		} else {
-			if (FillQueue()!=0)
-				return 0;
-		}
-	}
+    FrameQueueMap::iterator track = m_FrameQueues.find( trackIdx );
+    if (track == m_FrameQueues.end()) return NULL;
+
+    FrameQueue &track_queue = track->second;
+    while (track_queue.empty())    // TO_DO: handle EOS
+    {
+        if (FillQueue() != 0) return NULL;
+    }
+
+    if (track_queue.empty()) return NULL;
+
+    return track_queue.pop_front().release();
 };
 
-MatroskaAudioFrame * MatroskaParser::ReadFirstFrame()
+    // TO_DO: this feels like a hack.  Do we really need this function?
+MatroskaAudioFrame *MatroskaParser::ReadFirstFrame( uint16 trackIdx )
 {
     m_CurrentTimecode = 0;
-    return ReadSingleFrame();
+    return ReadSingleFrame( trackIdx );
 };
 
 typedef boost::shared_ptr<EbmlId> EbmlIdPtr;
@@ -1290,8 +1268,6 @@ static void log_info( const std::string &str )
 
 int MatroskaParser::FillQueue() 
 {
-	flush_queue();
-
 	NOTE("MatroskaParser::FillQueue()");
 
 	int UpperElementLevel = 0;
@@ -1349,6 +1325,7 @@ int MatroskaParser::FillQueue()
 
 					// Create a new frame
 					MatroskaAudioFrame *newFrame = new MatroskaAudioFrame;
+                    uint16 trackIdx = 0xffff;   // track of frame.
 
 					ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, ElementLevel2->ElementSize(), bAllowDummy));
 					while (ElementLevel3 != NullElement) {
@@ -1358,18 +1335,23 @@ int MatroskaParser::FillQueue()
 						if (UpperElementLevel < 0) {
 							UpperElementLevel = 0;
 						}
-						if (EbmlId(*ElementLevel3) == KaxBlock::ClassInfos.GlobalId) {								
+						if (EbmlId(*ElementLevel3) == KaxBlock::ClassInfos.GlobalId) {
 							KaxBlock & DataBlock = *static_cast<KaxBlock*>(ElementLevel3.get());														
 							DataBlock.ReadData(m_InputStream.I_O());
 							DataBlock.SetParent(*SegmentCluster);
 
 							//NOTE4("Track # %u / %u frame%s / Timecode %I64d", DataBlock.TrackNum(), DataBlock.NumberFrames(), (DataBlock.NumberFrames() > 1)?"s":"", DataBlock.GlobalTimecode()/m_TimecodeScale);
-							if (DataBlock.TrackNum() == m_Tracks.at(m_CurrentTrackNo).trackNumber) {											
+							uint16 trackNum = DataBlock.TrackNum();
+							if (TrackNumIsEnabled( trackNum ))
+                            {
+								trackIdx = FindTrack( trackNum );
+								MatroskaTrackInfo &track = m_Tracks[trackIdx];
+
 								newFrame->timecode = DataBlock.GlobalTimecode();
 
 								if (DataBlock.NumberFrames() > 1) {	
 									// The evil lacing has been used
-									newFrame->duration = m_Tracks.at(m_CurrentTrackNo).defaultDuration * DataBlock.NumberFrames();
+									newFrame->duration = track.defaultDuration * DataBlock.NumberFrames();
 
 									newFrame->dataBuffer.resize(DataBlock.NumberFrames());
 									for (uint32 f = 0; f < DataBlock.NumberFrames(); f++) {
@@ -1379,7 +1361,7 @@ int MatroskaParser::FillQueue()
 									}
 								} else {
 									// Non-lacing block		
-									newFrame->duration = m_Tracks.at(m_CurrentTrackNo).defaultDuration;
+									newFrame->duration = track.defaultDuration;
 
 									newFrame->dataBuffer.resize(1);
 									DataBuffer &buffer = DataBlock.GetBuffer(0);
@@ -1460,7 +1442,12 @@ int MatroskaParser::FillQueue()
 						//newFrame = new MatroskaReadFrame();
 					}
 					if (newFrame->dataBuffer.size()>0) {
-						m_Queue.push(newFrame);
+                        FrameQueueMap::iterator track = m_FrameQueues.find( trackIdx );
+                        if (track == m_FrameQueues.end()) continue;
+
+                        FrameQueue &track_queue = track->second;
+						track_queue.push_back( newFrame );
+
 						if (prevFrame != NULL && prevFrame->duration == 0) {
 							prevFrame->duration = newFrame->timecode - prevFrame->timecode;
 							//if (newFrame->duration == 0)
@@ -1550,6 +1537,7 @@ int MatroskaParser::FillQueue()
 
 					// Create a new frame
 					MatroskaAudioFrame *newFrame = new MatroskaAudioFrame;				
+                    uint16 trackIdx = 0xffff;   // track of frame.
 
 					ElementLevel3 = ElementPtr(m_InputStream.FindNextElement(ElementLevel2->Generic().Context, UpperElementLevel, ElementLevel2->ElementSize(), bAllowDummy));
 					while (ElementLevel3 != NullElement) {
@@ -1565,12 +1553,16 @@ int MatroskaParser::FillQueue()
 							DataBlock.SetParent(*SegmentCluster);
 
 							//NOTE4("Track # %u / %u frame%s / Timecode %I64d", DataBlock.TrackNum(), DataBlock.NumberFrames(), (DataBlock.NumberFrames() > 1)?"s":"", DataBlock.GlobalTimecode()/m_TimecodeScale);
-							if (DataBlock.TrackNum() == m_Tracks.at(m_CurrentTrackNo).trackNumber) {											
+							uint16 trackNum = DataBlock.TrackNum();
+							if (TrackNumIsEnabled( trackNum ))
+                            {
+								trackIdx = FindTrack( trackNum );
+								MatroskaTrackInfo &track = m_Tracks[trackIdx];
 								newFrame->timecode = DataBlock.GlobalTimecode();							
 
 								if (DataBlock.NumberFrames() > 1) {	
 									// The evil lacing has been used
-									newFrame->duration = m_Tracks.at(m_CurrentTrackNo).defaultDuration * DataBlock.NumberFrames();
+									newFrame->duration = track.defaultDuration * DataBlock.NumberFrames();
 
 									newFrame->dataBuffer.resize(DataBlock.NumberFrames());
 									for (uint32 f = 0; f < DataBlock.NumberFrames(); f++) {
@@ -1580,7 +1572,7 @@ int MatroskaParser::FillQueue()
 									}
 								} else {
 									// Non-lacing block		
-									newFrame->duration = m_Tracks.at(m_CurrentTrackNo).defaultDuration;
+									newFrame->duration = track.defaultDuration;
 									
 									newFrame->dataBuffer.resize(1);
 									DataBuffer &buffer = DataBlock.GetBuffer(0);
@@ -1620,7 +1612,14 @@ int MatroskaParser::FillQueue()
 						//newFrame = new MatroskaReadFrame();
 					}
 					if (newFrame->dataBuffer.size()>0)
-						m_Queue.push(newFrame);
+                    {
+                        FrameQueueMap::iterator track = m_FrameQueues.find( trackIdx );
+                        if (track == m_FrameQueues.end()) continue;
+
+                        FrameQueue &track_queue = track->second;
+						track_queue.push_back( newFrame );
+                    }
+                    else delete newFrame;
 				}
 
 				if (UpperElementLevel > 0) {
@@ -1819,7 +1818,12 @@ cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 		}
 
 		return correctEntry;
+	} catch (std::exception &e) {
+        LOG_ERROR_S( "Caught exception (" << typeid( e ).name() << "): " << e.what() );
+        cluster_entry_ptr null_ptr;
+		return null_ptr;
 	} catch (...) {
+        LOG_ERROR_S( "Caught unknown exception." );
         cluster_entry_ptr null_ptr;
 		return null_ptr;
 	}

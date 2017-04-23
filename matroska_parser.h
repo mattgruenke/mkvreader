@@ -37,13 +37,15 @@
 
 #include "DbgOut.h"
 #include <queue>
-#include <deque>
+#include <map>
+#include <set>
 #include <list>
 #include <cstring>
 #include <fstream>
 #include <boost/optional.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/ptr_container/ptr_deque.hpp>
 
 // libebml includes
 #include "ebml/StdIOCallback.h"
@@ -269,10 +271,14 @@ public:
 	int Parse(bool bInfoOnly = false, bool bBreakAtClusters = true);
 
 	MatroskaTrackInfo &GetTrack(uint16 trackNo) { return m_Tracks.at(trackNo); };
+	uint16 FindTrack(uint16 trackNum) const;
 	uint64 GetTimecodeScale() { return m_TimecodeScale; };
 
 	/// Returns an adjusted duration of the file
 	double GetDuration();
+
+	/// Returns an adjusted duration of the track
+	double GetTrackDuration( uint32 trackIdx ) const;
 
 	/// Returns the track index of the first decodable track
 	int32 GetFirstTrack( track_type type ) const;
@@ -280,8 +286,8 @@ public:
 	double TimecodeToSeconds(uint64 code,unsigned samplerate_hint = 44100);
 	uint64 SecondsToTimecode(double seconds);
 
-	/// Set the current track to read data from
-	void SetCurrentTrack(uint32 newTrackNo);
+	/// Enable reading data from a given track.
+	void EnableTrack(uint32 newTrackIdx);
 
 	/// Set the subsong to play, this adjusts all the duration/timecodes 
 	/// reported in public functions. So only use this if you are expecting that to happen
@@ -305,10 +311,8 @@ public:
 	/// If you request to seek to 2.0 and we can only seek to 1.9
 	/// the return value would be 100 * m_TimcodeScale
 
-	bool skip_frames_until(double destination,unsigned & frames,double & last_timecode_delta,unsigned hint_samplerate);
-	void flush_queue();
-	uint64 get_current_frame_timecode();
-	bool Seek(double seconds,unsigned & frames_to_skip,double & time_to_skip,unsigned samplerate_hint);
+	bool skip_frames_until(double destination, unsigned hint_samplerate);
+	bool Seek(double seconds, unsigned samplerate_hint);
 
 	/// Seek to a position
 	/// \param frame The MatroskaAudioFrame struct to store the frame	
@@ -316,8 +320,8 @@ public:
 	/// \return 1 If file could not be read or it not open	
 	/// \return 2 End of track (EOT)
 
-	MatroskaAudioFrame * ReadSingleFrame();
-    MatroskaAudioFrame * ReadFirstFrame();
+	MatroskaAudioFrame * ReadSingleFrame( uint16 trackIdx);
+    MatroskaAudioFrame * ReadFirstFrame( uint16 trackIdx );
 
 	UTFstring GetSegmentFileName() { return m_SegmentFilename; }
     typedef std::list<MatroskaAttachment> attachment_list;
@@ -347,7 +351,9 @@ protected:
 	MatroskaTagInfo *FindTagWithEditionUID(uint64 editionUID, uint64 trackUID = 0);
 	MatroskaTagInfo *FindTagWithChapterUID(uint64 chapterUID, uint64 trackUID = 0);
 
-        std::string m_filename;
+    bool TrackNumIsEnabled( uint16 trackNum ) const;
+
+    std::string m_filename;
 	boost::scoped_ptr<IOCallback> m_IOCallback;
 	EbmlStream m_InputStream;
 	/// The main/base/master element, should be the segment
@@ -355,13 +361,16 @@ protected:
 
 	MatroskaChapterInfo *m_CurrentChapter;
 	uint32 m_CurrentTrackNo;
+	std::set< uint16 > m_EnabledTrackNumbers;
 	std::vector<MatroskaTrackInfo> m_Tracks;
 	std::vector<MatroskaEditionInfo> m_Editions;
 	std::vector<MatroskaChapterInfo> m_Chapters;
 	std::vector<MatroskaTagInfo> m_Tags;
 	
 	/// This is the queue of buffered frames to deliver
-	std::queue<MatroskaAudioFrame *> m_Queue;
+    typedef boost::ptr_deque< MatroskaAudioFrame > FrameQueue;
+    typedef std::map<uint32, FrameQueue> FrameQueueMap;
+	FrameQueueMap m_FrameQueues;
 
 	/// This is the index of clusters in the file, it's used to seek in the file
 	// std::vector<MatroskaMetaSeekClusterEntry> m_ClusterIndex;
