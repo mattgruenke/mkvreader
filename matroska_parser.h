@@ -353,7 +353,6 @@ protected:
 	/// The main/base/master element, should be the segment
 	ElementPtr m_ElementLevel0;
 
-	MatroskaEditionInfo *m_CurrentEdition;
 	MatroskaChapterInfo *m_CurrentChapter;
 	uint32 m_CurrentTrackNo;
 	std::vector<MatroskaTrackInfo> m_Tracks;
@@ -384,13 +383,7 @@ protected:
 	uint32 m_TagSize;
 	uint32 m_TagScanRange;
 
-	//pfc::alloc_fast<BYTE> m_framebuffer;
-	//mem_block_factalloc<BYTE> m_framebuffer;
 	//int UpperElementLevel;
-private:
-	// We have no need for these
-	//MatroskaParser(const MatroskaParser &refParser) { };
-	//MatroskaParser &operator=(const MatroskaParser &refParser) { return *this; };
 };
 
 typedef boost::shared_ptr<MatroskaParser> matroska_parser_ptr;

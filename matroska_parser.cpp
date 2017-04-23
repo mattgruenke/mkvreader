@@ -220,7 +220,6 @@ MatroskaParser::MatroskaParser(const char *filename, abort_callback & p_abort)
 	m_CurrentTimecode = 0;
 	//m_ElementLevel0 = NULL;
 	//UpperElementLevel = 0;
-	m_CurrentEdition = 0;
 	m_CurrentChapter = 0;
 	m_FileSize = boost::filesystem::file_size(filename); // TO_DO: throws
 	m_TagPos = 0;
@@ -799,10 +798,7 @@ void MatroskaParser::SetCurrentTrack(uint32 newTrackNo)
 void MatroskaParser::SetSubSong(int subsong)
 {
 	// As we don't (yet?) use several Editions, select the first (default) one as the current one.
-	m_CurrentEdition = NULL;
 	m_CurrentChapter = NULL;
-	if(m_Editions.size() > 0)
-		m_CurrentEdition = &m_Editions.at(0);
 	if (subsong < 0 || m_Chapters.size() > (size_t) subsong)
 		m_CurrentChapter = &m_Chapters.at((size_t) subsong);
 	
@@ -1307,7 +1303,6 @@ int MatroskaParser::FillQueue()
 	ElementPtr ElementLevel4;
     ElementPtr ElementLevel5;
 	ElementPtr NullElement;
-	//m_framebuffer.set_size(0);
 
 	if (IsSeekable(*m_IOCallback)) {
 		cluster_entry_ptr currentCluster = FindCluster(m_CurrentTimecode);
