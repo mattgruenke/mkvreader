@@ -133,7 +133,7 @@ public:
 	MatroskaAudioFrame();
 	void Reset();
     double get_duration() {
-        return static_cast<double>(duration / 1000000000.0);
+        return static_cast<double>(duration) / 1000000000.0;
     }
 
 	uint64 timecode;
@@ -372,7 +372,7 @@ protected:
 	UTFstring m_WritingApp;
 	UTFstring m_MuxingApp;
 	UTFstring m_FileTitle;
-	int32 m_FileDate;
+	int64 m_FileDate;
 	UTFstring m_SegmentFilename;
 
 	uint64 m_FileSize;

@@ -81,7 +81,7 @@ bool starts_with(const string &s, const char *start) {
   return strncmp(s.c_str(), start, strlen(start)) == 0;
 };
 
-static bool IsSeekable(const IOCallback &cb)
+static bool IsSeekable(const IOCallback &)
 {
 #if 0
     return true;    // since we're using StdIOCallback, it's always seekable.
@@ -95,7 +95,7 @@ uint64 MatroskaParser::SecondsToTimecode(double seconds)
 	return (uint64)floor(seconds * 1000000000);
 };
 
-double MatroskaParser::TimecodeToSeconds(uint64 code,unsigned samplerate_hint)
+double MatroskaParser::TimecodeToSeconds(uint64 code, unsigned /*samplerate_hint*/ )
 {
 	return ((double)(int64)code / 1000000000);
 };
@@ -171,7 +171,7 @@ void MatroskaTagInfo::SetTagValue(const char *name, const char *value, int index
 
 void MatroskaTagInfo::RemoveMarkedTags()
 {
-	for (int i = tags.size()-1; i >= 0; i--)
+	for (int i = int( tags.size() )-1; i >= 0; i--)
 	{
 		MatroskaSimpleTag &simpleTag = tags.at(i);
 		if(simpleTag.removalPending == true)
@@ -183,7 +183,7 @@ void MatroskaTagInfo::RemoveMarkedTags()
 
 void MatroskaTagInfo::MarkAllAsRemovalPending()
 {
-	for (int i = tags.size()-1; i >= 0; i--)
+	for (int i = int( tags.size() )-1; i >= 0; i--)
 	{
 		MatroskaSimpleTag &simpleTag = tags.at(i);
 		simpleTag.removalPending = true;
@@ -222,7 +222,7 @@ MatroskaTrackInfo::MatroskaTrackInfo() {
 	codecPrivateReady = false;
 };
 
-MatroskaParser::MatroskaParser(const char *filename, abort_callback & p_abort) 
+MatroskaParser::MatroskaParser(const char *filename, abort_callback & ) 
 	:
 		m_filename(filename),
 		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode
@@ -395,7 +395,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 						duration.ReadData(m_InputStream.I_O());
 
 						// it's in milliseconds? -- in nanoseconds.
-						m_Duration = double(duration) * m_TimecodeScale;
+						m_Duration = double(duration) * double(m_TimecodeScale);
 
 					} else if (EbmlId(*ElementLevel2) == KaxDateUTC::ClassInfos.GlobalId) {
 						KaxDateUTC & DateUTC = *static_cast<KaxDateUTC *>(ElementLevel2.get());
@@ -451,13 +451,13 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 				EbmlElement* tmpElement = ElementLevel2.get();
 				Tracks->Read(m_InputStream, KaxTracks::ClassInfos.Context, UpperElementLevel, tmpElement, bAllowDummy);
 
-				for (size_t Index0 = 0; Index0 < Tracks->ListSize(); Index0++) {
+				for (uint32 Index0 = 0; Index0 < Tracks->ListSize(); Index0++) {
 					if ((*Tracks)[Index0]->Generic().GlobalId == KaxTrackEntry::ClassInfos.GlobalId) {
 						KaxTrackEntry &TrackEntry = *static_cast<KaxTrackEntry *>((*Tracks)[Index0]);
 						// Create a new MatroskaTrack
 						MatroskaTrackInfo newTrack;
 						
-						for (size_t Index1 = 0; Index1 < TrackEntry.ListSize(); Index1++) {
+						for (uint32 Index1 = 0; Index1 < TrackEntry.ListSize(); Index1++) {
 							if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackNumber::ClassInfos.GlobalId) {
 								KaxTrackNumber &TrackNumber = *static_cast<KaxTrackNumber*>(TrackEntry[Index1]);
 								newTrack.trackNumber = TrackNumber;
@@ -471,7 +471,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 								newTrack.trackType = (track_type) (uint8) TrackType;    // TO_DO: check that this is a supported track type.
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackTimecodeScale::ClassInfos.GlobalId) {
-								KaxTrackTimecodeScale &TrackTimecodeScale = *static_cast<KaxTrackTimecodeScale*>(TrackEntry[Index1]);
+								//KaxTrackTimecodeScale &TrackTimecodeScale = *static_cast<KaxTrackTimecodeScale*>(TrackEntry[Index1]);
 								// TODO: Support Tracks with different timecode scales?
 								//newTrack->TrackTimecodeScale = TrackTimecodeScale;
 
@@ -489,7 +489,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 								memcpy(&newTrack.codecPrivate[0], CodecPrivate.GetBuffer(), CodecPrivate.GetSize());
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackFlagDefault::ClassInfos.GlobalId) {
-								KaxTrackFlagDefault &TrackFlagDefault = *static_cast<KaxTrackFlagDefault*>(TrackEntry[Index1]);
+								//KaxTrackFlagDefault &TrackFlagDefault = *static_cast<KaxTrackFlagDefault*>(TrackEntry[Index1]);
 								//newTrack->FlagDefault = TrackFlagDefault;
 							/* Matroska2
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackFlagEnabled::ClassInfos.GlobalId) {
@@ -497,7 +497,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 								//newTrack->FlagEnabled = TrackFlagEnabled;
 							*/
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackFlagLacing::ClassInfos.GlobalId) {
-								KaxTrackFlagLacing &TrackFlagLacing = *static_cast<KaxTrackFlagLacing*>(TrackEntry[Index1]);
+								//KaxTrackFlagLacing &TrackFlagLacing = *static_cast<KaxTrackFlagLacing*>(TrackEntry[Index1]);
 								//newTrack->FlagLacing = TrackFlagLacing;
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackLanguage::ClassInfos.GlobalId) {
@@ -505,11 +505,11 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 								newTrack.language = std::string(TrackLanguage);
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackMaxCache::ClassInfos.GlobalId) {
-								KaxTrackMaxCache &TrackMaxCache = *static_cast<KaxTrackMaxCache*>(TrackEntry[Index1]);
+								//KaxTrackMaxCache &TrackMaxCache = *static_cast<KaxTrackMaxCache*>(TrackEntry[Index1]);
 								//newTrack->MaxCache = TrackMaxCache;
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackMinCache::ClassInfos.GlobalId) {
-								KaxTrackMinCache &TrackMinCache = *static_cast<KaxTrackMinCache*>(TrackEntry[Index1]);
+								//KaxTrackMinCache &TrackMinCache = *static_cast<KaxTrackMinCache*>(TrackEntry[Index1]);
 								//newTrack->MinCache = TrackMinCache;
 
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackName::ClassInfos.GlobalId) {
@@ -519,7 +519,7 @@ int MatroskaParser::Parse(bool bInfoOnly, bool bBreakAtClusters)
 							} else if (TrackEntry[Index1]->Generic().GlobalId == KaxTrackAudio::ClassInfos.GlobalId) {
 								KaxTrackAudio &TrackAudio = *static_cast<KaxTrackAudio*>(TrackEntry[Index1]);
 
-								for (size_t Index2 = 0; Index2 < TrackAudio.ListSize(); Index2++) {
+								for (uint32 Index2 = 0; Index2 < TrackAudio.ListSize(); Index2++) {
 									if (TrackAudio[Index2]->Generic().GlobalId == KaxAudioBitDepth::ClassInfos.GlobalId) {
 										KaxAudioBitDepth &AudioBitDepth = *static_cast<KaxAudioBitDepth*>(TrackAudio[Index2]);
 										newTrack.bitsPerSample = AudioBitDepth;
@@ -744,7 +744,7 @@ double MatroskaParser::GetDuration()
 
 double MatroskaParser::GetTrackDuration( uint32 trackIdx ) const
 {
-    return m_Tracks.at(trackIdx).defaultDuration * (int64)m_TimecodeScale;
+    return double( m_Tracks.at(trackIdx).defaultDuration ) * double( m_TimecodeScale );
 }
 
 int32 MatroskaParser::GetFirstTrack( track_type type ) const
@@ -759,7 +759,7 @@ int32 MatroskaParser::GetFirstTrack( track_type type ) const
 
 uint32 MatroskaParser::GetTrackCount() const
 {
-    return m_Tracks.size();
+    return (uint32) m_Tracks.size();
 }
 
 uint32 MatroskaParser::GetTrackCount( track_type type ) const
@@ -1074,7 +1074,7 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 
 	LOG_INFO_S("New chapter");
 
-	for (size_t i = 0; i < ChapterAtom->ListSize(); i++)
+	for (uint32 i = 0; i < ChapterAtom->ListSize(); i++)
 	{	
 		Element = (*ChapterAtom)[i];
 				
@@ -1097,7 +1097,7 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 		{
 			KaxChapterTrack *ChapterTrack = (KaxChapterTrack *)Element;
 			
-			for (size_t j = 0; j < ChapterTrack->ListSize(); j++)
+			for (uint32 j = 0; j < ChapterTrack->ListSize(); j++)
 			{
 				Element = (*ChapterTrack)[j];
 				if(IS_ELEMENT_ID(KaxChapterTrackNumber))
@@ -1120,7 +1120,7 @@ void MatroskaParser::Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector
 			MatroskaChapterDisplayInfo newChapterDisplay;							
 			KaxChapterDisplay *ChapterDisplay = (KaxChapterDisplay *)Element;
 			
-			for (size_t j = 0; j < ChapterDisplay->ListSize(); j++) {
+			for (uint32 j = 0; j < ChapterDisplay->ListSize(); j++) {
 				Element = (*ChapterDisplay)[j];
 				if(IS_ELEMENT_ID(KaxChapterString))
 				{
@@ -1165,14 +1165,14 @@ void MatroskaParser::Parse_Chapters(KaxChapters *chaptersElement)
 	chaptersElement->Read(m_InputStream, KaxChapters::ClassInfos.Context,
 		UpperEltFound, Element, true);
 
-	for (size_t i = 0; i < chaptersElement->ListSize(); i++)
+	for (uint32 i = 0; i < chaptersElement->ListSize(); i++)
 	{
 		Element = (*chaptersElement)[i];
 		if(IS_ELEMENT_ID(KaxEditionEntry))
 		{
 			MatroskaEditionInfo newEdition;
 			KaxEditionEntry *edition = (KaxEditionEntry *)Element;
-			for (size_t j = 0; j < edition->ListSize(); j++)
+			for (uint32 j = 0; j < edition->ListSize(); j++)
 			{
 				Element = (*edition)[j];
 				if(IS_ELEMENT_ID(KaxEditionUID))
@@ -1203,11 +1203,11 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 		return;
 
 	m_TagPos = tagsElement->GetElementPosition();
-	m_TagSize = tagsElement->GetSize();
+	m_TagSize = (uint32) tagsElement->GetSize();
 
 	tagsElement->Read(m_InputStream, KaxTags::ClassInfos.Context, UpperEltFound, Element, true);
 
-	for (size_t i = 0; i < tagsElement->ListSize(); i++)
+	for (uint32 i = 0; i < tagsElement->ListSize(); i++)
 	{
 		Element = (*tagsElement)[i];
 		if(IS_ELEMENT_ID(KaxTag))
@@ -1216,13 +1216,13 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 			newTag.targetTypeValue = 50;
 			KaxTag *tagElement = (KaxTag*)Element;
 			LOG_INFO("New Tag");
-			for (size_t j = 0; j < tagElement->ListSize(); j++)
+			for (uint32 j = 0; j < tagElement->ListSize(); j++)
 			{
 				Element = (*tagElement)[j];
 				if(IS_ELEMENT_ID(KaxTagTargets))
 				{
 					KaxTagTargets *tagTargetsElement = (KaxTagTargets*)Element;					
-					for (size_t k = 0; k < tagTargetsElement->ListSize(); k++)
+					for (uint32 k = 0; k < tagTargetsElement->ListSize(); k++)
 					{
 						Element = (*tagTargetsElement)[k];
 						if(IS_ELEMENT_ID(KaxTagTrackUID))
@@ -1262,7 +1262,7 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 					MatroskaSimpleTag newSimpleTag;
 					KaxTagSimple *tagSimpleElement = (KaxTagSimple*)Element;
 					LOG_INFO("New SimpleTag");
-					for (size_t k = 0; k < tagSimpleElement->ListSize(); k++)
+					for (uint32 k = 0; k < tagSimpleElement->ListSize(); k++)
 					{
 						Element = (*tagSimpleElement)[k];
 						if(IS_ELEMENT_ID(KaxTagName))
@@ -1789,7 +1789,7 @@ cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 		
 		cluster_entry_ptr correctEntry;
 		double clusterDuration = (double)(int64)m_ClusterIndex.size() / m_Duration;
-		size_t clusterIndex = clusterDuration * (double)(int64)timecode;
+		size_t clusterIndex = size_t( clusterDuration * (double)(int64)timecode );
 		//int lookCount = 0;
 		if (clusterIndex > m_ClusterIndex.size())
 			clusterIndex = m_ClusterIndex.size()-1;
@@ -1949,7 +1949,7 @@ void PrintChapters(std::vector<MatroskaChapterInfo> &theChapters)
 			LOG_INFO("\tDisplay %u, String: %s Lang: %s", d, currentChapter.display.at(d).string.GetUTF8().c_str(), currentChapter.display.at(d).lang.c_str());
 		}
 		for (uint32 t = 0; t < currentChapter.tracks.size(); t++) {
-			LOG_INFO("\tTrack %u, UID: %%u", t, (uint32)currentChapter.tracks.at(t));
+			LOG_INFO("\tTrack %u, UID: %u", t, (uint32)currentChapter.tracks.at(t));
 		}
 
 	}
