@@ -58,28 +58,6 @@ using namespace LIBMATROSKA_NAMESPACE;
 #define LOG_INFO(  ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
 #define LOG_DEBUG( ... )   {}
 
-const size_t TextBuffer_Size = 16;
-
-static const char * rg_fields[]=
-{
-	"REPLAYGAIN_GAIN",
-	"REPLAYGAIN_PEAK"
-};
-
-
-static const char * hidden_edition_field[] =
-{
-	"___DUMMY___",
-};
-
-static const char * hidden_chapter_field[] =
-{
-	"CDAUDIO_TRACK_FLAGS",
-};
-
-bool starts_with(const string &s, const char *start) {
-  return strncmp(s.c_str(), start, strlen(start)) == 0;
-};
 
 static bool IsSeekable(const IOCallback &)
 {
