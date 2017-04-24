@@ -48,15 +48,46 @@ using namespace LIBEBML_NAMESPACE;
 using namespace LIBMATROSKA_NAMESPACE;
 
 
-#define LOG_ERROR_S( s )     (std::cerr << s << std::endl)
-#define LOG_WARN_S(  s )     (std::cerr << s << std::endl)
-#define LOG_INFO_S(  s )     (std::cerr << s << std::endl)
-#define LOG_DEBUG_S( s )     {}
+#ifndef LOG_LEVEL
+#   define LOG_LEVEL 2
+#endif
 
-#define LOG_ERROR( ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
-#define LOG_WARN(  ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
-#define LOG_INFO(  ... )   { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
-#define LOG_DEBUG( ... )   {}
+#define LOG_FORMATTED( ... )    { fprintf( stderr, __VA_ARGS__ ); fprintf( stderr, "\n" ); fflush( stderr ); }
+#define LOG_STREAM( s )         (std::cerr << s << std::endl)
+#define LOG_DISABLED( ... )     static_cast< void >( 0 )
+
+#if LOG_LEVEL >= 1
+#   define LOG_ERROR( ... )     LOG_FORMATTED( __VA_ARGS__ )
+#   define LOG_ERROR_S( s )     LOG_STREAM( s )
+#else
+#   define LOG_ERROR( ... )     LOG_DISABLED( __VA_ARGS__ )
+#   define LOG_ERROR_S( s )     LOG_DISABLED( s )
+#endif
+
+#if LOG_LEVEL >= 2
+#   define LOG_WARN(  ... )     LOG_FORMATTED( __VA_ARGS__ )
+#   define LOG_WARN_S(  s )     LOG_STREAM( s )
+#else
+#   define LOG_WARN( ... )      LOG_DISABLED( __VA_ARGS__ )
+#   define LOG_WARN_S( s )      LOG_DISABLED( s )
+#endif
+
+#if LOG_LEVEL >= 3
+#   define LOG_INFO(  ... )     LOG_FORMATTED( __VA_ARGS__ )
+#   define LOG_INFO_S(  s )     LOG_STREAM( s )
+#else
+#   define LOG_INFO( ... )      LOG_DISABLED( __VA_ARGS__ )
+#   define LOG_INFO_S( s )      LOG_DISABLED( s )
+#endif
+
+#if LOG_LEVEL >= 4
+#   define LOG_DEBUG( ... )     LOG_FORMATTED( __VA_ARGS__ )
+#   define LOG_DEBUG_S( s )     LOG_STREAM( s )
+#else
+#   define LOG_DEBUG( ... )     LOG_DISABLED( __VA_ARGS__ )
+#   define LOG_DEBUG_S( s )     LOG_DISABLED( s )
+#endif
+
 
 
 static bool IsSeekable(const IOCallback &)
