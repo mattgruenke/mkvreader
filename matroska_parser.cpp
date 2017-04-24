@@ -236,6 +236,7 @@ MatroskaParser::MatroskaParser(const char *filename, abort_callback & )
 		m_filename(filename),
 		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode
 		m_InputStream(*m_IOCallback),
+		m_MaxQueueDepth( 0 ),
 		m_Eof( false )
 {
 	m_TimecodeScale = TIMECODE_SCALE;
@@ -832,6 +833,19 @@ bool MatroskaParser::TrackNumIsEnabled( uint16 trackNum ) const
 }
 
 
+bool MatroskaParser::IsAnyQueueFull() const
+{
+    if (m_MaxQueueDepth == 0) return false;
+
+    for(FrameQueueMap::const_iterator track = m_FrameQueues.begin(); track != m_FrameQueues.end(); ++track)
+    {
+        if (track->second.size() >= (size_t) m_MaxQueueDepth) return true;
+    }
+
+    return false;
+}
+
+
 uint16 MatroskaParser::FindTrack( uint16 trackNum ) const
 {
     for (size_t i = 0; i != m_Tracks.size(); i++)
@@ -850,6 +864,13 @@ void MatroskaParser::SetSubSong(int subsong)
 		m_CurrentChapter = &m_Chapters.at((size_t) subsong);
 	
 };
+
+
+void MatroskaParser::SetMaxQueueDepth( unsigned int depth )
+{
+    m_MaxQueueDepth = depth;
+}
+
 
 int32 MatroskaParser::GetAvgBitrate() 
 { 
@@ -873,7 +894,7 @@ bool MatroskaParser::skip_frames_until(double destination, unsigned hint_sampler
             if (!track_queue.empty()) have_data = true;
         }
 
-        if (!have_data && (FillQueue() != 0)) return false;
+        if (!have_data && (FillQueue() > 0)) return false;
     }
 
     return true;
@@ -892,7 +913,7 @@ bool MatroskaParser::Seek(double seconds, unsigned samplerate_hint)
 	if (!skip_frames_until(seconds, samplerate_hint)) return false;
 
 	m_CurrentTimecode = seekToTimecode;
-	return FillQueue() == 0;
+	return (FillQueue() > 0);
 };
 
 MatroskaFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
@@ -901,7 +922,7 @@ MatroskaFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
     if (track == m_FrameQueues.end()) return NULL;
 
     FrameQueue &track_queue = track->second;
-    while (track_queue.empty())    // TO_DO: handle EOS
+    while (track_queue.empty())
     {
         if (FillQueue() != 0) return NULL;
     }
@@ -1332,6 +1353,12 @@ void MatroskaParser::Parse_Tags(KaxTags *tagsElement)
 int MatroskaParser::FillQueue() 
 {
 	LOG_DEBUG("MatroskaParser::FillQueue()");
+
+    if (IsAnyQueueFull())
+    {
+        LOG_WARN_S( "MatroskaParser::FillQueue(): not filling because another queue is full." );
+        return -1;
+    }
 
 	int UpperElementLevel = 0;
 	bool bAllowDummy = false;

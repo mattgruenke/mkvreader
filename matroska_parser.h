@@ -282,6 +282,11 @@ public:
 	/// \param subsong This should be within the range of the chapters vector
 	void SetSubSong(int subsong);
 
+    /// Limits the number of frames that will be read on any track, while queuing
+    /// up frames for another.  Note: this is not a hard limit.
+    /// \param depth number of frames; 0 disables.
+    void SetMaxQueueDepth( unsigned int depth );
+
 	std::vector<MatroskaEditionInfo> &GetEditions() { return m_Editions; };
 	std::vector<MatroskaChapterInfo> &GetChapters() { return m_Chapters; };
 	std::vector<MatroskaTrackInfo> &GetTracks() { return m_Tracks; };
@@ -324,6 +329,7 @@ protected:
 	void Parse_Tags(KaxTags *tagsElement);
 
 	/// Reads frames from file.
+	/// \return -1 If another queue is full.
 	/// \return 0 If read ok	
 	/// \return 1 End of file
 	/// \return 2 If no cluster at current timecode
@@ -346,6 +352,7 @@ protected:
 	MatroskaTagInfo *FindTagWithChapterUID(uint64 chapterUID, uint64 trackUID = 0);
 
     bool TrackNumIsEnabled( uint16 trackNum ) const;
+    bool IsAnyQueueFull() const;
 
     std::string m_filename;
 	boost::scoped_ptr<IOCallback> m_IOCallback;
@@ -380,9 +387,10 @@ protected:
 	UTFstring m_FileTitle;
 	int64 m_FileDate;
 	UTFstring m_SegmentFilename;
+	uint32    m_MaxQueueDepth;
 
 	uint64 m_FileSize;
-	bool  m_Eof;
+	bool   m_Eof;
 	uint64 m_TagPos;
 	uint32 m_TagSize;
 	uint32 m_TagScanRange;
