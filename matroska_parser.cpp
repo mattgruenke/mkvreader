@@ -1862,13 +1862,11 @@ cluster_entry_ptr MatroskaParser::FindCluster(uint64 timecode)
 		return correctEntry;
 	} catch (std::exception &e) {
         LOG_ERROR_S( "Caught exception (" << typeid( e ).name() << "): " << e.what() );
-        cluster_entry_ptr null_ptr;
-		return null_ptr;
 	} catch (...) {
         LOG_ERROR_S( "Caught unknown exception." );
-        cluster_entry_ptr null_ptr;
-		return null_ptr;
 	}
+    cluster_entry_ptr null_ptr;
+    return null_ptr;
 }
 
 void MatroskaParser::CountClusters() 
