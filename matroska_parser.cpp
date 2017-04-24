@@ -799,22 +799,6 @@ int32 MatroskaParser::GetTrackIndex(track_type type, uint32 index) const
     return -1;
 }
 
-/*
-static uint64_t time_to_samples(double time, uint32_t sample_rate) {
-	return (uint64_t) floor(sample_rate * time + 0.5);
-}
-
-
-static std::string cuesheet_format_index_time(double time) {
-	uint64_t ticks = time_to_samples(time, 75);
-	uint64_t seconds = ticks / 75;
-	uint64_t minutes = seconds / 60;
-	ticks %= 75;
-	seconds %= 60;
-	return boost::str( boost::format( "%02d:%02d:%02d" ) % minutes % seconds % ticks );
-}
-*/
-
 
 void MatroskaParser::EnableTrack(uint32 newTrackIdx)
 {
