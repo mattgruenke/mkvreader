@@ -137,6 +137,28 @@ public:
         return static_cast<double>(duration) / 1000000000.0;
     }
 
+    double get_time() const
+    {
+        return static_cast<double>(timecode) / 1000000000.0;
+    }
+
+    template< typename DestType > void get_payload( DestType &dest ) const
+    {
+        size_t total_size = 0;
+        for (std::vector<ByteArray>::const_iterator i = dataBuffer.begin();
+            i != dataBuffer.end(); ++i)
+        {
+            total_size += i->size();
+        }
+
+        dest.reserve( dest.size() + total_size );
+        for (std::vector<ByteArray>::const_iterator i = dataBuffer.begin();
+            i != dataBuffer.end(); ++i)
+        {
+            dest.insert( dest.end(), i->begin(), i->end() );
+        }
+    }
+
 	uint64 timecode;
 	uint64 duration;
 	std::vector<ByteArray> dataBuffer;
