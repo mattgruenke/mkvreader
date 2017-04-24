@@ -876,11 +876,16 @@ MatroskaFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
     return track_queue.pop_front().release();
 };
 
-    // TO_DO: this feels like a hack.  Do we really need this function?
-MatroskaFrame *MatroskaParser::ReadFirstFrame( uint16 trackIdx )
+bool MatroskaParser::Restart()
 {
-    m_CurrentTimecode = 0;
-    return ReadSingleFrame( trackIdx );
+    m_CurrentChapter = NULL;
+    for (FrameQueueMap::iterator track = m_FrameQueues.begin(); track != m_FrameQueues.end(); ++track)
+    {
+        track->second.clear();
+    }
+
+    unsigned int samplerate_hint = 0;   // this value is unused & should probably be removed.
+    return Seek( 0.0, samplerate_hint );
 };
 
 const MatroskaParser::attachment_list &MatroskaParser::GetAttachmentList() const

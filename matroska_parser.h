@@ -309,7 +309,9 @@ public:
 	/// \return 2 End of track (EOT)
 
 	MatroskaFrame * ReadSingleFrame( uint16 trackIdx);
-    MatroskaFrame * ReadFirstFrame( uint16 trackIdx );
+
+    /// Seeks to the beginning of the stream.
+    bool Restart(); // Untested & might not work.
 
 	UTFstring GetSegmentFileName() { return m_SegmentFilename; }
     typedef std::list<MatroskaAttachment> attachment_list;
