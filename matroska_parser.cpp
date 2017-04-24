@@ -204,7 +204,8 @@ MatroskaParser::MatroskaParser(const char *filename, abort_callback & )
 	:
 		m_filename(filename),
 		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode
-		m_InputStream(*m_IOCallback)
+		m_InputStream(*m_IOCallback),
+		m_Eof( false )
 {
 	m_TimecodeScale = TIMECODE_SCALE;
 	m_FileDate = 0;
@@ -785,7 +786,10 @@ static std::string cuesheet_format_index_time(double time) {
 
 void MatroskaParser::EnableTrack(uint32 newTrackIdx)
 {
+        // This is only kept for the sake of the legacy hack in the seekable path,
+        //  which I'm not currently using.  That should be tidied up and this removed.
 	m_CurrentTrackNo = newTrackIdx;
+
     m_EnabledTrackNumbers.insert( m_Tracks.at(newTrackIdx).trackNumber );
     m_FrameQueues.insert( std::pair< uint32, FrameQueue >( newTrackIdx, FrameQueue() ) );
 }
@@ -878,6 +882,7 @@ MatroskaFrame * MatroskaParser::ReadSingleFrame( uint16 trackIdx )
 
 bool MatroskaParser::Restart()
 {
+    m_Eof = false;
     m_CurrentChapter = NULL;
     for (FrameQueueMap::iterator track = m_FrameQueues.begin(); track != m_FrameQueues.end(); ++track)
     {
@@ -909,6 +914,12 @@ ByteArray MatroskaParser::ReadAttachment( attachment_list::const_iterator attach
     m_IOCallback->setFilePointer( oldpos );
 
     return result;
+}
+
+
+bool MatroskaParser::IsEof() const
+{
+    return m_Eof;
 }
 
 
@@ -1318,7 +1329,8 @@ int MatroskaParser::FillQueue()
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)
 		{
-			LOG_ERROR_S( "MatroskaParser::FillQueue(): got NullElement" );
+			LOG_INFO_S( "MatroskaParser::FillQueue(): got NullElement" );
+			m_Eof = true;
 			return 1;
 		}
 
@@ -1532,7 +1544,8 @@ int MatroskaParser::FillQueue()
 		ElementLevel1 = ElementPtr(m_InputStream.FindNextID(KaxCluster::ClassInfos, 0xFFFFFFFFFFFFFFFFL));
 		if (ElementLevel1 == NullElement)
 		{
-			LOG_ERROR_S( "MatroskaParser::FillQueue(): got NullElement" );
+			LOG_INFO_S( "MatroskaParser::FillQueue(): got NullElement" );
+			m_Eof = true;
 			return 1;
 		}
 

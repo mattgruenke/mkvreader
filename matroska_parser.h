@@ -318,6 +318,10 @@ public:
 	const attachment_list &GetAttachmentList() const;
     ByteArray ReadAttachment( attachment_list::const_iterator attachment );
 
+    /// Indicates whether the end of the file has been reached.
+    /// When reading multiple tracks, use this to decide when to stop reading.
+    bool IsEof() const;
+
 protected:
 	void Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly);
 	void Parse_Chapters(KaxChapters *chaptersElement);
@@ -379,6 +383,7 @@ protected:
 	UTFstring m_SegmentFilename;
 
 	uint64 m_FileSize;
+	bool  m_Eof;
 	uint64 m_TagPos;
 	uint32 m_TagSize;
 	uint32 m_TagScanRange;
