@@ -302,12 +302,6 @@ public:
 	bool skip_frames_until(double destination, unsigned hint_samplerate);
 	bool Seek(double seconds, unsigned samplerate_hint);
 
-	/// Seek to a position
-	/// \param frame The MatroskaFrame struct to store the frame	
-	/// \return 0 If read ok	
-	/// \return 1 If file could not be read or it not open	
-	/// \return 2 End of track (EOT)
-
 	MatroskaFrame * ReadSingleFrame( uint16 trackIdx);
 
     /// Seeks to the beginning of the stream.
@@ -328,6 +322,11 @@ protected:
 	void Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom);
 	void Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters);
 	void Parse_Tags(KaxTags *tagsElement);
+
+	/// Reads frames from file.
+	/// \return 0 If read ok	
+	/// \return 1 End of file
+	/// \return 2 If no cluster at current timecode
 	int FillQueue();
 	uint64 GetClusterTimecode(uint64 filePos);
 	cluster_entry_ptr FindCluster(uint64 timecode);
