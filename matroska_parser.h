@@ -123,6 +123,8 @@ public:
 	UTFstring FileName;
 	std::string MimeType;
 	UTFstring Description;
+
+	// Details on where the attachment resides.
 	UTFstring SourceFilename;
 	uint64 SourceStartPos;
 	uint64 SourceDataLength;
