@@ -1,6 +1,4 @@
 /*
- *  Part of the foobar2000 Matroska plugin
- *
  *  Copyright (C) Jory Stone (jcsston at toughguy net) - 2003-2004
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -28,6 +26,8 @@
 		\version $Id$
     \brief An audio slated Matroska Reader+Parser
 		\author Jory Stone     <jcsston @ toughguy.net>
+
+    This was originally part of the foobar2000 Matroska plugin.
 */
 
 #ifndef _MATROSKA_PARSER_H_
