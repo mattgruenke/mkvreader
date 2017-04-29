@@ -231,7 +231,7 @@ MatroskaTrackInfo::MatroskaTrackInfo() {
 	codecPrivateReady = false;
 };
 
-MatroskaParser::MatroskaParser(const char *filename, abort_callback & ) 
+MatroskaParser::MatroskaParser(const char *filename ) 
 	:
 		m_filename(filename),
 		m_IOCallback(new StdIOCallback(filename, MODE_READ)), // TO_DO: revisit mode

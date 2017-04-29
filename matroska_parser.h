@@ -78,7 +78,6 @@
 #include "matroska/KaxChapters.h"
 #include "matroska/KaxVersion.h"
 
-#include "abort_callback.h"
 
 #define TIMECODE_SCALE  1000000
 #define MAX_UINT64 0xFFFFFFFFFFFFFFFF
@@ -274,7 +273,7 @@ typedef boost::shared_ptr<MatroskaMetaSeekClusterEntry> cluster_entry_ptr;
 
 class MatroskaParser {
 public:
-	MatroskaParser(const char *filename, abort_callback & p_abort);
+	explicit MatroskaParser(const char *filename /*, abort_callback & p_abort */ );
 	~MatroskaParser();
 
 	/// The main header parsing function
