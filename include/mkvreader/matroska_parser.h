@@ -78,7 +78,10 @@
 #include "matroska/KaxVersion.h"
 
 
-namespace mkvreader { static const uint64 DefaultTimecodeScale = 1000000; }
+namespace mkvreader {
+
+
+static const uint64 DefaultTimecodeScale = 1000000;
 
 
 typedef std::vector<uint8> ByteArray;
@@ -424,5 +427,9 @@ public:
 	~MatroskaSearch() {};
 	int Match(unsigned int start = 0);
 };
+
+
+}   // namespace mkvreader
+
 
 #endif // _MATROSKA_PARSER_H_

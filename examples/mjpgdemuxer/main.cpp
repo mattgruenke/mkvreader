@@ -6,11 +6,11 @@
 #include <boost/ptr_container/ptr_vector.hpp>
 
 
-void PrintQueue( const boost::ptr_vector< MatroskaFrame > &frames )
+void PrintQueue( const boost::ptr_vector< mkvreader::MatroskaFrame > &frames )
 {
     int count = 0;
     uint64 prev_timecode = 0;
-    for (boost::ptr_vector< MatroskaFrame >::const_iterator frame = frames.begin();
+    for (boost::ptr_vector< mkvreader::MatroskaFrame >::const_iterator frame = frames.begin();
         frame != frames.end();
         ++frame)
     {
@@ -31,7 +31,7 @@ int main( int argc, const char * const argv[] )
     const char *filename = (argc >= 2) ? argv[1] : "test.mkv";
     std::cout << "Reading " << filename << "\n";
 
-    MatroskaParser parser( filename );
+    mkvreader::MatroskaParser parser( filename );
     if (int failure = parser.Parse( true, true ))
     {
         std::cerr << "Parsing failed: " << failure << "\n";
@@ -41,7 +41,7 @@ int main( int argc, const char * const argv[] )
     std::cout << "File duration is " << parser.GetDuration() << "\n";
     std::cout << "\n";
 
-    typedef MatroskaParser::attachment_list AttachmentsList;
+    typedef mkvreader::MatroskaParser::attachment_list AttachmentsList;
     AttachmentsList attachments = parser.GetAttachmentList();
     if (attachments.empty())
     std::cout << "Found " << attachments.size() << " attachments.\n";
@@ -81,7 +81,7 @@ int main( int argc, const char * const argv[] )
 
     for (int i = 0; i < parser.GetTrackCount(); i++)
     {
-        MatroskaTrackInfo &track = parser.GetTrack( i );
+        mkvreader::MatroskaTrackInfo &track = parser.GetTrack( i );
         std::cout << "Info for track " << i << ":\n"
             << "  type:      " << track.trackType << "\n"
             << "  num:       " << track.trackNumber << "\n"
@@ -105,13 +105,13 @@ int main( int argc, const char * const argv[] )
 
     int video_count = 0;
     int   pcd_count = 0;
-    boost::ptr_vector< MatroskaFrame > video_frames;
-    boost::ptr_vector< MatroskaFrame >   pcd_frames;
+    boost::ptr_vector< mkvreader::MatroskaFrame > video_frames;
+    boost::ptr_vector< mkvreader::MatroskaFrame >   pcd_frames;
     bool progress = false;
     while (!parser.IsEof() || progress)
     {
         progress = false;
-        MatroskaFrame *video_frame = NULL;
+        mkvreader::MatroskaFrame *video_frame = NULL;
         do
         {
             video_frame = parser.ReadSingleFrame( video_track ); 
@@ -125,7 +125,7 @@ int main( int argc, const char * const argv[] )
         while (video_frame);
         std::cout << "Got " << video_count << " video frames.\n";
 
-        MatroskaFrame *pcd_frame = NULL;
+        mkvreader::MatroskaFrame *pcd_frame = NULL;
         do
         {
             pcd_frame = parser.ReadSingleFrame( pcd_track ); 

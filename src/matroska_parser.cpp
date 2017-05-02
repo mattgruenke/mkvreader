@@ -95,6 +95,8 @@ using namespace LIBMATROSKA_NAMESPACE;
 #endif
 
 
+namespace mkvreader {
+
 
 static bool IsSeekable(const IOCallback &)
 {
@@ -2050,3 +2052,7 @@ int MatroskaSearch::Match(unsigned int start)
 	}
 	return -1;
 };
+
+
+}   // namespace mkvreader
+
