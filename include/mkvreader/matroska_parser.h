@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) Jory Stone (jcsston at toughguy net) - 2003-2004
- *  Copyright (C) Matt Gruenke (mattgruenke@users.noreply.github.com) - 2017
+ *  Copyright (C) Matt Gruenke (github.com/mattgruenke) - 2017
  *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
