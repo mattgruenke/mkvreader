@@ -33,12 +33,10 @@
 #ifndef _MATROSKA_PARSER_H_
 #define _MATROSKA_PARSER_H_
 
-#define MULTITRACK 1
 
 #include <map>
 #include <set>
 #include <list>
-#include <cstring>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/ptr_container/ptr_deque.hpp>
@@ -79,32 +77,12 @@
 #include "matroska/KaxVersion.h"
 
 
-#define TIMECODE_SCALE  1000000
-#define MAX_UINT64 0xFFFFFFFFFFFFFFFF
-#define _DELETE(__x) if (__x) { delete __x; __x = NULL; }
+namespace mkvreader { static const uint64 DefaultTimecodeScale = 1000000; }
 
-//Memory Leak Debuging define
-#ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC 
-#include <stdlib.h>
-#include <crtdbg.h>
-#endif
-
-#ifdef _DEBUG
-   #define DEBUG_CLIENTBLOCK   new( _CLIENT_BLOCK, __FILE__, __LINE__)
-#else
-   #define DEBUG_CLIENTBLOCK
-#endif // _DEBUG
-
-#ifdef _DEBUG
-#define new DEBUG_CLIENTBLOCK
-#endif
-
-#ifdef _DEBUG
-#endif
 
 using namespace LIBEBML_NAMESPACE;
 using namespace LIBMATROSKA_NAMESPACE;
+
 
 typedef std::vector<uint8> ByteArray;
 typedef boost::shared_ptr<EbmlElement> ElementPtr;

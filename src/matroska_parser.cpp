@@ -32,10 +32,11 @@
 
 #include "mkvreader/matroska_parser.h"
 
-#include <iostream>
 #include <cmath>
+#include <limits>
 #include <string>
 #include <typeinfo>
+#include <iostream>
 #include <algorithm>
 
 #include <boost/format.hpp>
@@ -46,6 +47,10 @@ using std::string;
 
 using namespace LIBEBML_NAMESPACE;	
 using namespace LIBMATROSKA_NAMESPACE;
+
+
+#define MAX_UINT64      std::numeric_limits<uint64>::max()
+#define _DELETE(x)      if (x) { delete (x); (x) = NULL; }
 
 
 #ifndef LOG_LEVEL
@@ -239,7 +244,7 @@ MatroskaParser::MatroskaParser(const char *filename )
 		m_MaxQueueDepth( 0 ),
 		m_Eof( false )
 {
-	m_TimecodeScale = TIMECODE_SCALE;
+	m_TimecodeScale = mkvreader::DefaultTimecodeScale;
 	m_FileDate = 0;
 	m_Duration = 0;
 	m_CurrentTimecode = 0;
