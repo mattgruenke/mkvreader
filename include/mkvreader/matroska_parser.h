@@ -80,15 +80,12 @@
 namespace mkvreader { static const uint64 DefaultTimecodeScale = 1000000; }
 
 
-using namespace LIBEBML_NAMESPACE;
-
-
 typedef std::vector<uint8> ByteArray;
-typedef boost::shared_ptr<EbmlElement> ElementPtr;
+typedef boost::shared_ptr<libebml::EbmlElement> ElementPtr;
 
 class MatroskaVersion {
 public:
-    static const char * lib_ebml() { return EbmlCodeVersion.c_str(); };
+    static const char * lib_ebml() { return libebml::EbmlCodeVersion.c_str(); };
     static const char * lib_matroska() { return libmatroska::KaxCodeVersion.c_str(); };
 };
 
@@ -356,7 +353,7 @@ protected:
 
     std::string m_filename;
 	boost::scoped_ptr<IOCallback> m_IOCallback;
-	EbmlStream m_InputStream;
+	libebml::EbmlStream m_InputStream;
 	/// The main/base/master element, should be the segment
 	ElementPtr m_ElementLevel0;
 
