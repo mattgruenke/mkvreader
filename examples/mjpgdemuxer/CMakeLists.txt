@@ -11,6 +11,7 @@ target_link_libraries( mjpgdemuxer mkvreader )
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
     ${EBML_INCLUDE_DIRS}
     ${Matroska_INCLUDE_DIRS}
 )

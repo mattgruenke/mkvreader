@@ -15,6 +15,11 @@ option( BuildExamples
 
 set( CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/" ${CMAKE_MODULE_PATH} )
 
+find_package( Boost REQUIRED COMPONENTS filesystem )
+if( NOT Boost_FOUND )
+    message( FATAL_ERROR "Required package not found: boost" )
+endif()
+
 find_package( EBML REQUIRED )
 if( NOT EBML_FOUND )
     message( FATAL_ERROR "Required package not found: libebml" )

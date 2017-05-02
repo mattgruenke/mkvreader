@@ -19,13 +19,18 @@ file( GLOB headers
 
 add_library( mkvreader ${sources} )
 
-target_link_libraries( mkvreader ${EBML_LIBRARY} ${Matroska_LIBRARY} )
+target_link_libraries( mkvreader
+    ${EBML_LIBRARY}
+    ${Matroska_LIBRARY}
+    Boost::filesystem
+)
 
 
 ## How to build it ##
 
 include_directories(
     ${incl}
+    ${Boost_INCLUDE_DIRS}
     ${EBML_INCLUDE_DIRS}
     ${Matroska_INCLUDE_DIRS}
 )
