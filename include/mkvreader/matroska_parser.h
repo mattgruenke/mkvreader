@@ -81,7 +81,6 @@ namespace mkvreader { static const uint64 DefaultTimecodeScale = 1000000; }
 
 
 using namespace LIBEBML_NAMESPACE;
-using namespace LIBMATROSKA_NAMESPACE;
 
 
 typedef std::vector<uint8> ByteArray;
@@ -90,7 +89,7 @@ typedef boost::shared_ptr<EbmlElement> ElementPtr;
 class MatroskaVersion {
 public:
     static const char * lib_ebml() { return EbmlCodeVersion.c_str(); };
-    static const char * lib_matroska() { return KaxCodeVersion.c_str(); };
+    static const char * lib_matroska() { return libmatroska::KaxCodeVersion.c_str(); };
 };
 
 class MatroskaAttachment {
@@ -324,10 +323,10 @@ public:
 
 protected:
 	void Parse_MetaSeek(ElementPtr metaSeekElement, bool bInfoOnly);
-	void Parse_Chapters(KaxChapters *chaptersElement);
-	void Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom);
-	void Parse_Chapter_Atom(KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters);
-	void Parse_Tags(KaxTags *tagsElement);
+	void Parse_Chapters(libmatroska::KaxChapters *chaptersElement);
+	void Parse_Chapter_Atom(libmatroska::KaxChapterAtom *ChapterAtom);
+	void Parse_Chapter_Atom(libmatroska::KaxChapterAtom *ChapterAtom, std::vector<MatroskaChapterInfo> &p_chapters);
+	void Parse_Tags(libmatroska::KaxTags *tagsElement);
 
 	/// Reads frames from file.
 	/// \return -1 If another queue is full.
